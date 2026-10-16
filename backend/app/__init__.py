@@ -1,0 +1,1 @@
+# StockPilot Backend Application Package
