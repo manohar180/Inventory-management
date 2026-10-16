@@ -110,25 +110,31 @@ jobs:
             --tag ${{ env.FRONTEND_IMAGE }} \
             ./frontend
 
+      # Install official Trivy CLI
+      - name: Install Trivy Security Scanner
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          trivy --version
+
       # Security Gate: Trivy Scan Backend Image
       - name: Trivy Vulnerability Scan - Backend Image
-        uses: aquasecurity/trivy-action@0.29.0
-        with:
-          image-ref: ${{ env.BACKEND_IMAGE }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'HIGH,CRITICAL'
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --format table \
+            ${{ env.BACKEND_IMAGE }}
 
       # Security Gate: Trivy Scan Frontend Image
       - name: Trivy Vulnerability Scan - Frontend Image
-        uses: aquasecurity/trivy-action@0.29.0
-        with:
-          image-ref: ${{ env.FRONTEND_IMAGE }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'HIGH,CRITICAL'
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --format table \
+            ${{ env.FRONTEND_IMAGE }}
 
       # Authenticate to GitHub Container Registry (Push to main only)
       - name: Log in to GitHub Container Registry
