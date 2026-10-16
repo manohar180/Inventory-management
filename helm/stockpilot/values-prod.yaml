@@ -4,9 +4,9 @@
 backend:
   image:
     repository: ghcr.io/manohar180/stockpilot-backend
-    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"
+    tag: "c6b45bb80873baa3dad24edcb8cfb68f5a3fec99"
 
 frontend:
   image:
     repository: ghcr.io/manohar180/stockpilot-frontend
-    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"
+    tag: "c6b45bb80873baa3dad24edcb8cfb68f5a3fec99"
