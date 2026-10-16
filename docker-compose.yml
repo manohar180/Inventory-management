@@ -1,0 +1,73 @@
+services:
+  # ==========================================
+  # PostgreSQL Database Service
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: stockpilot-postgres
+    environment:
+      POSTGRES_USER: stockpilot_user
+      POSTGRES_PASSWORD: stockpilot_pass
+      POSTGRES_DB: stockpilot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockpilot_user -d stockpilot_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - stockpilot-network
+
+  # ==========================================
+  # StockPilot FastAPI Backend Service
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stockpilot-backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://stockpilot_user:stockpilot_pass@postgres:5432/stockpilot_db
+      APP_NAME: StockPilot
+      APP_ENV: production
+      APP_PORT: 8000
+      DEBUG: "False"
+      METRICS_ENABLED: "True"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - stockpilot-network
+
+  # ==========================================
+  # StockPilot React Frontend (Nginx Non-Root)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stockpilot-frontend
+    ports:
+      - "3000:8080"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - stockpilot-network
+
+volumes:
+  postgres_data:
+    name: stockpilot_postgres_data
+
+networks:
+  stockpilot-network:
+    name: stockpilot-network
+    driver: bridge
