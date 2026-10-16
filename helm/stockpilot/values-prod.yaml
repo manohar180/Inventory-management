@@ -3,10 +3,10 @@
 
 backend:
   image:
-    repository: ghcr.io/PLACEHOLDER_OWNER/stockpilot-backend
-    tag: "latest"
+    repository: ghcr.io/manohar180/stockpilot-backend
+    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"
 
 frontend:
   image:
-    repository: ghcr.io/PLACEHOLDER_OWNER/stockpilot-frontend
-    tag: "latest"
+    repository: ghcr.io/manohar180/stockpilot-frontend
+    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"
