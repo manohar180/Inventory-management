@@ -1,0 +1,12 @@
+# StockPilot - Helm Production Values (GitOps Target)
+# This file is watched by ArgoCD and updated automatically by the GitHub Actions CI/CD pipeline upon push to main.
+
+backend:
+  image:
+    repository: ghcr.io/PLACEHOLDER_OWNER/stockpilot-backend
+    tag: "latest"
+
+frontend:
+  image:
+    repository: ghcr.io/PLACEHOLDER_OWNER/stockpilot-frontend
+    tag: "latest"
