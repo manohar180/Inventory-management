@@ -1,0 +1,21 @@
+# Terraform-specific files to exclude from Git
+# ──────────────────────────────────────────────
+# terraform.tfvars may contain your AWS account ID or region preferences
+*.tfvars
+!*.tfvars.example
+
+# State files contain ALL resource IDs and some secrets in plain text
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# The .terraform/ directory holds downloaded provider binaries (large, auto-generated)
+.terraform/
+.terraform.lock.hcl
+
+# Crash log from a failed Terraform run
+crash.log
+crash.*.log
+
+# Plan output files (may contain sensitive data)
+*.tfplan

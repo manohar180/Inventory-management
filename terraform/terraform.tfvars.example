@@ -1,0 +1,37 @@
+# ==============================================================================
+# terraform.tfvars.example — Example Variable Overrides (SAFE TO COMMIT)
+# WHY:  Shows teammates what values they need to provide WITHOUT containing
+#       any real secrets or account IDs. Copy this to terraform.tfvars and
+#       fill in your own values. terraform.tfvars is gitignored.
+# WHEN: Copied by each developer before running terraform plan/apply.
+# WHERE: terraform/ directory — committed to Git.
+#
+# ⚠️  NEVER commit terraform.tfvars (it may contain your AWS account ID).
+#     NEVER commit AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY anywhere.
+#     Use environment variables or AWS SSO/IAM roles for authentication.
+# ==============================================================================
+
+# AWS region — Mumbai is the default; change to your nearest region
+aws_region = "ap-south-1"
+
+# Environment label — helps with cost tagging
+environment = "dev"
+
+# ── Networking ────────────────────────────────────────────────────────────────
+vpc_name             = "stockpilot-vpc"
+vpc_cidr             = "10.30.0.0/16"
+availability_zones   = ["ap-south-1a", "ap-south-1b"]
+private_subnet_cidrs = ["10.30.1.0/24", "10.30.2.0/24"]
+public_subnet_cidrs  = ["10.30.101.0/24", "10.30.102.0/24"]
+
+# ── EKS ───────────────────────────────────────────────────────────────────────
+cluster_name    = "stockpilot-eks"
+cluster_version = "1.31"
+
+# ── Node Group ────────────────────────────────────────────────────────────────
+# t3.medium = 2 vCPU / 4 GB RAM (cheapest that comfortably runs the demo stack)
+# Destroy the cluster when done to avoid AWS charges!
+node_instance_type = "t3.medium"
+node_min_size      = 2
+node_max_size      = 4
+node_desired_size  = 2
