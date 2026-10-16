@@ -1,0 +1,60 @@
+# ==============================================================================
+# argocd/application.yaml — ArgoCD Application for StockPilot
+#
+# WHY:  ArgoCD watches this file. When the CI/CD pipeline updates the image
+#       tags in helm/stockpilot/values-prod.yaml and pushes to Git, ArgoCD
+#       automatically detects the change and deploys the new version.
+#       This is the "GitOps loop": Git is the single source of truth.
+#       Think of ArgoCD as a robot that continuously compares what's in Git
+#       with what's running in Kubernetes and fixes any differences.
+#
+# WHEN: Applied once after ArgoCD is installed:
+#       kubectl apply -f argocd/application.yaml -n argocd
+#
+# ⚠️  REPLACE the repoURL below with your actual GitHub repository URL.
+#     Search for "REPLACE_WITH_YOUR_GITHUB_REPO_URL" and update it.
+# ==============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stockpilot
+  namespace: argocd          # ArgoCD Application resources always live in argocd ns
+  labels:
+    app.kubernetes.io/name: stockpilot
+    app.kubernetes.io/managed-by: argocd
+  # Ensure ArgoCD deletes managed resources when this Application is deleted
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+spec:
+  # ── Source: where to read the Helm chart from ───────────────────────────────
+  source:
+    # ⚠️  REPLACE THIS with your actual GitHub repository URL
+    repoURL: https://github.com/manohar180/Inventory-management.git
+    targetRevision: main      # Always track the main branch
+    path: helm/stockpilot     # Path to the Helm chart inside the repo
+
+    # Pass values-prod.yaml as an override so ArgoCD uses production settings
+    helm:
+      valueFiles:
+        - values-prod.yaml    # CI/CD pipeline updates image tags in this file
+
+  # ── Destination: which cluster and namespace to deploy to ───────────────────
+  destination:
+    server: https://kubernetes.default.svc   # In-cluster Kubernetes API server
+    namespace: stockpilot
+
+  # ── Sync Policy: automated GitOps ───────────────────────────────────────────
+  syncPolicy:
+    automated:
+      prune: true       # Delete resources that are no longer in Git
+      selfHeal: true    # Revert manual changes made directly via kubectl
+    syncOptions:
+      - CreateNamespace=true    # Create 'stockpilot' namespace if it doesn't exist
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true          # Prune old resources only after new ones are healthy
+
+  # ── Health Checks ────────────────────────────────────────────────────────────
+  # ArgoCD will show the app as Healthy only when all pods are Running
+  revisionHistoryLimit: 5

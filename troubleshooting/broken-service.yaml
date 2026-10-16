@@ -1,0 +1,60 @@
+# ==============================================================================
+# troubleshooting/broken-service.yaml — Broken Service Scenario for StockPilot
+#
+# SCENARIO: The backend Service has a wrong selector label, so traffic from
+#           the Ingress never reaches any backend pods. The pods are Running
+#           but the service returns 503 / connection refused.
+#           This simulates a common misconfiguration after a deployment rename.
+#
+# HOW TO APPLY (for the troubleshooting lab):
+#   kubectl apply -f troubleshooting/broken-service.yaml -n stockpilot
+#
+# WHAT YOU WILL SEE:
+#   curl http://<ingress-host>/api/health
+#   # 503 Service Unavailable  OR  curl: (7) Failed to connect
+#
+#   kubectl get endpoints stockpilot-backend-broken-svc -n stockpilot
+#   # NAME                           ENDPOINTS   AGE
+#   # stockpilot-backend-broken-svc  <none>      5s   ← NO endpoints! Wrong selector.
+#
+# HOW TO DIAGNOSE:
+#   # Step 1: Check endpoints — empty = selector mismatch
+#   kubectl get endpoints -n stockpilot
+#
+#   # Step 2: Describe the service to see its selector
+#   kubectl describe svc stockpilot-backend-broken-svc -n stockpilot
+#
+#   # Step 3: List pod labels to find the correct selector
+#   kubectl get pods -n stockpilot --show-labels
+#
+#   # Step 4: Compare — the Service selector must EXACTLY match pod labels.
+#
+# HOW TO FIX:
+#   # Edit the service to use the correct selector:
+#   kubectl patch svc stockpilot-backend-broken-svc -n stockpilot \
+#     --type='json' \
+#     -p='[{"op":"replace","path":"/spec/selector/app.kubernetes.io~1component","value":"backend"}]'
+#
+#   # OR: delete this broken service
+#   kubectl delete -f troubleshooting/broken-service.yaml -n stockpilot
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpilot-backend-broken-svc
+  namespace: stockpilot
+  labels:
+    purpose: troubleshooting-lab
+spec:
+  type: ClusterIP
+  # ⚠️  INTENTIONALLY BROKEN: selector uses 'component: api' but backend pods
+  #     have label 'app.kubernetes.io/component: backend'.
+  #     No pods will match → Endpoints list will be empty → 503 errors.
+  selector:
+    component: api    # ← WRONG label key/value. Should be: app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

@@ -1,0 +1,54 @@
+# ==============================================================================
+# troubleshooting/broken-image.yaml — Broken Image Scenario for StockPilot
+#
+# SCENARIO: The backend pod is stuck in ImagePullBackOff because the image tag
+#           in the deployment points to a tag that does not exist in GHCR.
+#           This simulates what happens when the CI/CD pipeline fails mid-push
+#           or someone manually edits the tag to a typo.
+#
+# HOW TO APPLY (for the troubleshooting lab):
+#   kubectl apply -f troubleshooting/broken-image.yaml -n stockpilot
+#
+# WHAT YOU WILL SEE:
+#   kubectl get pods -n stockpilot
+#   NAME                                        READY   STATUS             RESTARTS
+#   stockpilot-backend-broken-xxxx-xxxx         0/1     ImagePullBackOff   0
+#
+# HOW TO DIAGNOSE:
+#   kubectl describe pod -l app=stockpilot-backend-broken -n stockpilot
+#   # Look for: Failed to pull image ... tag does not exist
+#
+# HOW TO FIX:
+#   kubectl set image deployment/stockpilot-backend-broken \
+#     backend=ghcr.io/manohar180/stockpilot-backend:<VALID_SHA> \
+#     -n stockpilot
+#   # OR: delete this broken deployment and re-deploy via Helm
+#   kubectl delete -f troubleshooting/broken-image.yaml -n stockpilot
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stockpilot-backend-broken
+  namespace: stockpilot
+  labels:
+    app: stockpilot-backend-broken
+    purpose: troubleshooting-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stockpilot-backend-broken
+  template:
+    metadata:
+      labels:
+        app: stockpilot-backend-broken
+    spec:
+      containers:
+        - name: backend
+          # ⚠️  INTENTIONALLY BROKEN: tag 'v9.9.9-does-not-exist' does not exist
+          #     in GHCR, causing ImagePullBackOff
+          image: ghcr.io/manohar180/stockpilot-backend:v9.9.9-does-not-exist
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
