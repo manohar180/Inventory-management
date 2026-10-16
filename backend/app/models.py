@@ -39,6 +39,7 @@ class Product(Base):
         order_by="StockMovement.id.desc()"
     )
 
+    @property
     def is_low_stock(self) -> bool:
         """Helper to determine if inventory has hit or dropped below reorder threshold."""
         return self.quantity <= self.reorder_level
