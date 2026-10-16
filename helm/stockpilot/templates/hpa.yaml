@@ -1,0 +1,50 @@
+# ==============================================================================
+# templates/hpa.yaml — HorizontalPodAutoscaler for the Backend
+# WHY:  When traffic spikes, Kubernetes automatically adds more backend pods
+#       (up to maxReplicas) and removes them when load drops.
+#       Like a call centre adding agents during rush hour and sending them home
+#       when things are quiet — but fully automated.
+# REQUIRES: metrics-server installed in the cluster.
+# WHEN: Only created when hpa.enabled = true (default: true).
+# ==============================================================================
+
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "stockpilot.fullname" . }}-backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "stockpilot.fullname" . }}-backend
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # Scale out when average CPU across all backend pods exceeds this %
+          averageUtilization: {{ .Values.hpa.targetCPUUtilizationPercentage }}
+  behavior:
+    # Scale down slowly to avoid flapping (wait 5 min before each scale-down step)
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    # Scale up quickly when under load
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+{{- end }}

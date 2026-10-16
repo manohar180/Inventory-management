@@ -1,0 +1,21 @@
+apiVersion: v2
+name: stockpilot
+description: >
+  StockPilot — Inventory Management System.
+  A full-stack cloud-native application with FastAPI backend,
+  React frontend, and PostgreSQL database. Deployed on Kubernetes
+  as part of the DevOps Final Capstone project.
+type: application
+# Chart version — bump this whenever you change the chart itself
+version: 1.0.0
+# Application version — the version of StockPilot being deployed
+appVersion: "1.0.0"
+keywords:
+  - inventory
+  - stockpilot
+  - fastapi
+  - react
+  - devops
+home: https://github.com/manohar180/Inventory-management
+maintainers:
+  - name: manohar180

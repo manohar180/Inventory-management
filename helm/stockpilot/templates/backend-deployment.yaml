@@ -1,0 +1,79 @@
+# ==============================================================================
+# templates/backend-deployment.yaml — FastAPI Backend Deployment
+# WHY:  Runs the StockPilot FastAPI application in Kubernetes.
+#       2 replicas ensure zero-downtime rolling updates and basic HA.
+#       Probes ensure traffic only reaches healthy pods.
+#       Non-root securityContext matches the Dockerfile's appuser (uid 10001).
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "stockpilot.fullname" . }}-backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "stockpilot.backendSelectorLabels" . | nindent 6 }}
+  # Rolling update: bring up new pods before terminating old ones
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "stockpilot.backendSelectorLabels" . | nindent 8 }}
+      annotations:
+        # Force pod restart when the Secret changes (credential rotation)
+        checksum/secret: {{ include (print $.Template.BasePath "/postgres.yaml") . | sha256sum }}
+    spec:
+      # Security: never run as root
+      securityContext:
+        {{- toYaml .Values.backend.securityContext | nindent 8 }}
+
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          env:
+            # Build the PostgreSQL connection string from the Secret values
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: stockpilot-postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stockpilot-postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: stockpilot-postgres-secret
+                  key: POSTGRES_DB
+            - name: DATABASE_URL
+              value: "postgresql+psycopg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/$(POSTGRES_DB)"
+
+          # Liveness: if FastAPI stops responding, restart the pod
+          livenessProbe:
+            {{- toYaml .Values.backend.livenessProbe | nindent 12 }}
+
+          # Readiness: only send traffic once the DB connection is healthy
+          readinessProbe:
+            {{- toYaml .Values.backend.readinessProbe | nindent 12 }}
+
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}

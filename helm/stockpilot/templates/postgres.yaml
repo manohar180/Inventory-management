@@ -1,0 +1,113 @@
+# ==============================================================================
+# templates/postgres.yaml — PostgreSQL StatefulSet, PVC, Service and Secret
+# WHY:  PostgreSQL stores all inventory data. We use a Secret for credentials
+#       (not plain env vars), a PVC so data survives pod restarts, and a
+#       ClusterIP Service so the backend can reach the DB by hostname.
+#       In production, consider RDS or a managed Postgres instead.
+# ==============================================================================
+
+# ── Kubernetes Secret — DB Credentials ────────────────────────────────────────
+# ⚠️  DEMO: credentials are in values.yaml. In production, use External Secrets
+#     Operator + AWS Secrets Manager or Sealed Secrets to avoid committing creds.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stockpilot-postgres-secret
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  POSTGRES_USER: {{ .Values.postgres.username | quote }}
+  POSTGRES_PASSWORD: {{ .Values.postgres.password | quote }}
+  POSTGRES_DB: {{ .Values.postgres.database | quote }}
+---
+# ── PersistentVolumeClaim — Postgres Data Volume ──────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: stockpilot-postgres-pvc
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce           # One node can mount this at a time (fine for Postgres)
+  resources:
+    requests:
+      storage: {{ .Values.postgres.storage }}
+  # storageClassName defaults to the cluster default (gp2 on EKS, standard on kind)
+---
+# ── Deployment — PostgreSQL ───────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stockpilot-postgres
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1    # Postgres cannot scale horizontally without additional setup
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockpilot
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stockpilot
+        app.kubernetes.io/component: database
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          # Load credentials from the Secret — never use plain env vars for passwords
+          envFrom:
+            - secretRef:
+                name: stockpilot-postgres-secret
+          # Readiness probe: only route traffic once Postgres accepts connections
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 5
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata   # Subpath prevents Postgres "lost+found" init error
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: stockpilot-postgres-pvc
+---
+# ── ClusterIP Service — PostgreSQL ────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockpilot-postgres
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: stockpilot
+    app.kubernetes.io/component: database
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP

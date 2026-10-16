@@ -1,0 +1,64 @@
+# ==============================================================================
+# templates/frontend-deployment.yaml — React/Nginx Frontend Deployment
+# WHY:  Serves the compiled React SPA via Nginx (nginx-unprivileged image)
+#       and proxies /api calls to the backend Service.
+#       Runs as non-root (uid 101) matching the Dockerfile.
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "stockpilot.fullname" . }}-frontend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "stockpilot.frontendSelectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "stockpilot.frontendSelectorLabels" . | nindent 8 }}
+    spec:
+      # Security: run as nginx user (uid 101) — matches nginx-unprivileged
+      securityContext:
+        {{- toYaml .Values.frontend.securityContext | nindent 8 }}
+
+      containers:
+        - name: frontend
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: 8080    # nginx-unprivileged binds to 8080, not 80
+              protocol: TCP
+
+          # Liveness: if Nginx stops serving, restart the pod
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+
+          # Readiness: only send traffic once Nginx is serving the SPA
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}

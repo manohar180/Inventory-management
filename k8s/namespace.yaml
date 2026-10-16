@@ -1,0 +1,20 @@
+# ==============================================================================
+# k8s/namespace.yaml — Kubernetes Namespace for StockPilot
+# WHY:  A namespace is like a virtual cluster inside your real cluster.
+#       It isolates StockPilot resources from other workloads (Prometheus,
+#       ArgoCD, etc.) so there are no naming collisions and RBAC is cleaner.
+# WHEN: Applied once before deploying the Helm chart.
+#       `kubectl apply -f k8s/namespace.yaml`
+# WHERE: k8s/ directory — committed to Git.
+# ==============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stockpilot
+  labels:
+    # Label used by kube-prometheus-stack to discover ServiceMonitors
+    # in this namespace
+    monitoring: "true"
+    app.kubernetes.io/managed-by: "helm"
+    project: "stockpilot"

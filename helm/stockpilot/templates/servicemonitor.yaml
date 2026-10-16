@@ -1,0 +1,37 @@
+# ==============================================================================
+# templates/servicemonitor.yaml — Prometheus ServiceMonitor for the Backend
+# WHY:  kube-prometheus-stack uses ServiceMonitor CRDs to discover which
+#       services to scrape. Without this, Prometheus won't collect the custom
+#       stockpilot_stock_movements_total and stockpilot_low_stock_products metrics.
+# REQUIRES: kube-prometheus-stack (Prometheus Operator) installed in the cluster.
+# WHEN: Only created when monitoring.serviceMonitor.enabled = true.
+# ==============================================================================
+
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "stockpilot.fullname" . }}-backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+    # This label MUST match the Prometheus Operator's serviceMonitorSelector.
+    # The default kube-prometheus-stack release name is 'kube-prometheus-stack'.
+    release: {{ .Values.monitoring.serviceMonitor.prometheusRelease }}
+spec:
+  # Select the backend Service in the stockpilot namespace
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: http              # Named port on the backend Service
+      path: {{ .Values.monitoring.serviceMonitor.path }}
+      interval: {{ .Values.monitoring.serviceMonitor.interval }}
+      # Scrape timeout must be less than the interval
+      scrapeTimeout: 10s
+{{- end }}

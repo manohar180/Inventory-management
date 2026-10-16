@@ -1,12 +1,35 @@
-# StockPilot - Helm Production Values (GitOps Target)
-# This file is watched by ArgoCD and updated automatically by the GitHub Actions CI/CD pipeline upon push to main.
+# values-prod.yaml — Production Environment Overrides
+# WHY:  Production needs HA (2+ replicas), Ingress exposed, HPA active,
+#       and real GHCR image tags (injected by GitHub Actions CI/CD pipeline).
+# This file is watched by ArgoCD. The CI/CD pipeline automatically updates
+# the image tags here after a successful build, scan, and push.
+
+replicaCount: 2
 
 backend:
   image:
     repository: ghcr.io/manohar180/stockpilot-backend
-    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"
+    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"   # Auto-updated by CI/CD
+    pullPolicy: Always
 
 frontend:
   image:
     repository: ghcr.io/manohar180/stockpilot-frontend
-    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"
+    tag: "51dcf7ae925ecf14fa121037e171a99fe40eaeb5"   # Auto-updated by CI/CD
+    pullPolicy: Always
+
+ingress:
+  enabled: true
+  className: nginx
+  # Replace with your real domain or the AWS Load Balancer hostname
+  host: stockpilot.example.com
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+
+monitoring:
+  serviceMonitor:
+    enabled: true

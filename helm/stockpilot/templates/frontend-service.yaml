@@ -1,0 +1,23 @@
+# ==============================================================================
+# templates/frontend-service.yaml — ClusterIP Service for the React Frontend
+# WHY:  The Ingress controller needs a Service to route / traffic to the
+#       frontend pods. ClusterIP keeps it internal — only the Ingress can reach it.
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "stockpilot.fullname" . }}-frontend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: {{ .Values.frontend.service.type }}
+  selector:
+    {{- include "stockpilot.frontendSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.frontend.service.port }}
+      targetPort: http   # References the named port 'http' on the container (8080)
+      protocol: TCP

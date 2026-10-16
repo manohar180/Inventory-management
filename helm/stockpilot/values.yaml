@@ -1,0 +1,133 @@
+# ==============================================================================
+# values.yaml — Default Helm Values for StockPilot
+# WHY:  This file is the "control panel" of the chart. Every tunable setting
+#       lives here with a safe default. values-dev.yaml and values-prod.yaml
+#       override only the fields that differ per environment.
+# WHEN: Merged by Helm before rendering templates.
+# WHERE: helm/stockpilot/ — committed to Git.
+# ==============================================================================
+
+# ── Namespace ─────────────────────────────────────────────────────────────────
+namespace: stockpilot
+
+# ── Replica Counts ────────────────────────────────────────────────────────────
+replicaCount: 2  # Both backend and frontend run 2 replicas by default for HA
+
+# ── Backend Configuration ─────────────────────────────────────────────────────
+backend:
+  image:
+    repository: ghcr.io/manohar180/stockpilot-backend
+    tag: "latest"          # Overridden by CI/CD with the Git commit SHA
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8000             # FastAPI/Uvicorn listens on 8000
+
+  # Resource requests/limits — keep pods honest about CPU/RAM usage
+  resources:
+    requests:
+      cpu: "100m"          # 0.1 CPU cores minimum
+      memory: "256Mi"
+    limits:
+      cpu: "500m"          # Never use more than 0.5 CPU cores
+      memory: "512Mi"
+
+  # Liveness probe: if /health returns non-2xx, Kubernetes restarts the pod
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30   # Give alembic upgrade head time to run
+    periodSeconds: 15
+    failureThreshold: 3
+
+  # Readiness probe: pod only receives traffic once the DB connection works
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    failureThreshold: 3
+
+  # Security context — run as non-root user matching the Dockerfile
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    readOnlyRootFilesystem: false  # alembic needs to write tmp files
+
+# ── Frontend Configuration ────────────────────────────────────────────────────
+frontend:
+  image:
+    repository: ghcr.io/manohar180/stockpilot-frontend
+    tag: "latest"          # Overridden by CI/CD with the Git commit SHA
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8080             # nginx-unprivileged listens on 8080 (non-root)
+
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+
+  # Security context — runs as nginx user (uid 101) set by nginx-unprivileged
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    readOnlyRootFilesystem: false
+
+# ── PostgreSQL Configuration ──────────────────────────────────────────────────
+postgres:
+  image: postgres:16-alpine
+  host: stockpilot-postgres   # Kubernetes Service name within the namespace
+  port: 5432
+  database: stockpilot
+  # ⚠️  DEMO VALUES ONLY — In production, inject these via an external secret
+  #     manager (AWS Secrets Manager + External Secrets Operator) or Sealed Secrets.
+  username: stockpilot
+  password: stockpilotpass   # CHANGE THIS for any non-local deployment
+
+  storage: 5Gi               # PVC size for postgres data
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# ── Ingress Configuration ─────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  # ingressClassName controls which Ingress Controller handles this resource
+  # Set to "nginx" for ingress-nginx, "alb" for AWS Load Balancer Controller
+  className: nginx
+  host: stockpilot.local     # Override with your real domain or LB hostname
+  annotations: {}
+
+# ── Horizontal Pod Autoscaler ─────────────────────────────────────────────────
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  # Scale out when average CPU across all backend pods exceeds 60%
+  targetCPUUtilizationPercentage: 60
+
+# ── Observability / Prometheus ────────────────────────────────────────────────
+monitoring:
+  serviceMonitor:
+    # Set to true only when kube-prometheus-stack is installed in the cluster
+    enabled: true
+    # The 'release' label must match the Helm release name of kube-prometheus-stack
+    prometheusRelease: kube-prometheus-stack
+    interval: 15s
+    path: /metrics

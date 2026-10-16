@@ -1,0 +1,15 @@
+# values-dev.yaml — Development Environment Overrides
+# Overrides only what differs from values.yaml for local/dev clusters.
+# Use: helm install stockpilot ./helm/stockpilot -f helm/stockpilot/values-dev.yaml
+
+replicaCount: 1   # Single replica saves resources in dev
+
+ingress:
+  enabled: false  # Use kubectl port-forward in dev instead of Ingress
+
+hpa:
+  enabled: false  # No HPA needed in dev
+
+monitoring:
+  serviceMonitor:
+    enabled: false  # Prometheus may not be installed in dev cluster

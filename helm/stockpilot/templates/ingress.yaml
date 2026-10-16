@@ -1,0 +1,49 @@
+# ==============================================================================
+# templates/ingress.yaml — Nginx Ingress for StockPilot
+# WHY:  The Ingress is the single entry point from the internet into the cluster.
+#       Think of it as a smart router: requests to /api go to the backend,
+#       everything else goes to the frontend (the React SPA handles its own routing).
+# WHEN: Only created when ingress.enabled = true (default: true for prod).
+# REQUIRES: ingress-nginx controller installed in the cluster.
+# ==============================================================================
+
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "stockpilot.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+  annotations:
+    # Rewrite /api requests so the backend receives the path without /api prefix
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Enable CORS for development testing via the Ingress
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          # /api → backend FastAPI (8000)
+          # ORDER MATTERS: more specific paths must come first
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "stockpilot.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.service.port }}
+          # / → frontend Nginx (8080) — serves the React SPA
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "stockpilot.fullname" . }}-frontend
+                port:
+                  number: {{ .Values.frontend.service.port }}
+{{- end }}
