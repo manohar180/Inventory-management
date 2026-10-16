@@ -4,6 +4,7 @@
 ## M1 — Application 
 
 - [x] **App running in browser** — `http://localhost:3000` showing the StockPilot dashboard with KPI cards and product table
+
   - ![App Dashboard](screenshots/app-dashboard.png)
 
 - [ ] **Add/Edit product modal** — open the modal and show a product being created
@@ -145,26 +146,5 @@
 - [ ] **ArgoCD app tree** — show the resource tree (deployments, services, ingress all green)
   - ![ArgoCD app tree](screenshots/argocd-tree.png)
 
-- [ ] **Presentation video uploaded** — `demo/` folder in GitHub shows the MP4 file
-  - OR a GitHub Release link in the README
-  - File: N/A (the video IS the evidence)
-
 ---
 
-## Quick Summary: Total Screenshots Needed
-
-| Module | Required Screenshots |
-|--------|---------------------|
-| M1 App | 5 |
-| M2 Git | 2 |
-| M3 Tests | 2 |
-| M4 Docker | 3 |
-| M5 CI/CD | 4 |
-| M6 Registry | 2 |
-| M7 Terraform | 7 |
-| M8 Kubernetes | 6 |
-| M9 Observability | 5 |
-| M10 Documentation | 5 |
-| **TOTAL** | **41** |
-
-> Store all screenshots in `demo/screenshots/` and reference them in README.md.

@@ -80,9 +80,9 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets # Worker nodes go in private subnets
 
-  # Allow kubectl access from anywhere (suitable for a capstone demo).
-  # In production, restrict this to a VPN CIDR or bastion host IP.
-  cluster_endpoint_public_access = true
+  # Allow kubectl access from anywhere and allow worker nodes to talk to API privately
+  cluster_endpoint_public_access  = true
+  cluster_endpoint_private_access = true
 
   # Automatically grant the Terraform caller admin access to the cluster
   # (avoids having to manually add a ConfigMap entry after apply).
@@ -105,8 +105,8 @@ module "eks" {
       max_size     = var.node_max_size
       desired_size = var.node_desired_size
 
-      # Use the latest EKS-optimised Amazon Linux 2 AMI automatically
-      ami_type = "AL2_x86_64"
+      # For Kubernetes 1.31, Amazon Linux 2023 is required
+      ami_type = "AL2023_x86_64_STANDARD"
 
       # Nodes need this policy to pull images from ECR / GHCR (via VPC endpoint
       # or internet via NAT gateway)
@@ -134,9 +134,6 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent = true
-    }
-    aws-ebs-csi-driver = {
       most_recent = true
     }
   }
