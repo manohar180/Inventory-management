@@ -356,11 +356,14 @@ kubectl get events -n stockpilot --sort-by=lastTimestamp # Timeline of events
 
 ## Screenshots (Submission Evidence)
 
-Add your screenshots here after running each component:
+### Application Dashboard
+![StockPilot Dashboard](demo/screenshots/app-dashboard.png)
+
+### Submission Evidence Checklist
 
 | Step | Screenshot file | Status |
 |------|----------------|--------|
-| App running in browser | `demo/screenshots/app-ui.png` | ☐ |
+| App running in browser | [app-dashboard.png](demo/screenshots/app-dashboard.png) | ☑ Completed |
 | pytest passing | `demo/screenshots/pytest-pass.png` | ☐ |
 | GitHub Actions green | `demo/screenshots/ci-green.png` | ☐ |
 | GHCR packages page | `demo/screenshots/ghcr-packages.png` | ☐ |

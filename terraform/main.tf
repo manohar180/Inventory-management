@@ -88,6 +88,12 @@ module "eks" {
   # (avoids having to manually add a ConfigMap entry after apply).
   enable_cluster_creator_admin_permissions = true
 
+  # Disable custom KMS key, CloudWatch log group, and IRSA OIDC provider to avoid SCP policy restrictions
+  create_kms_key              = false
+  cluster_encryption_config   = {}
+  create_cloudwatch_log_group = false
+  enable_irsa                 = false
+
   # ── Managed Node Group ──────────────────────────────────────────────────────
   # A managed node group means AWS handles node patching, replacement, and
   # lifecycle — we just declare the desired state.
