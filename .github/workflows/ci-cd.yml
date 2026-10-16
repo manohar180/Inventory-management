@@ -1,0 +1,244 @@
+name: StockPilot DevSecOps CI/CD
+
+# ==============================================================================
+# Triggers:
+# - Run tests & scans on all Pull Requests targeting 'main'
+# - Run tests, scans, publish to GHCR, and bump GitOps tags on Push to 'main'
+# ==============================================================================
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'demo/**'
+      - 'troubleshooting/**'
+      - '.gitignore'
+  pull_request:
+    branches:
+      - main
+
+# Ensure concurrent runs on the same branch are cancelled if a new commit arrives
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # JOB 1: Test & Code Quality (Rubric M2 & M5)
+  # Runs on both PRs and Pushes to main. Build must fail if tests fail.
+  # ============================================================================
+  test:
+    name: Test - Pytest & Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Backend Pytest Suite
+        working-directory: backend
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          pytest -v
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Compile Frontend Production Build
+        working-directory: frontend
+        run: npm run build
+
+  # ============================================================================
+  # JOB 2: Build, Trivy Security Scan & Publish to GHCR (Rubric M5 & M6)
+  # - Builds both Docker images tagged with Git commit SHA (${{ github.sha }})
+  # - Scans both images with Trivy (severity HIGH,CRITICAL, exit-code 1)
+  # - Only publishes to GHCR on push to 'main' AFTER scans pass
+  # ============================================================================
+  build-scan-publish:
+    name: Build, Scan & Publish Images
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Lowercase Image Names
+        run: |
+          # GHCR requires repository and image names in lowercase
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_OWNER=${OWNER_LC}" >> $GITHUB_ENV
+          echo "BACKEND_IMAGE=ghcr.io/${OWNER_LC}/stockpilot-backend:${{ github.sha }}" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE=ghcr.io/${OWNER_LC}/stockpilot-frontend:${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Build Backend Docker Image
+        run: |
+          docker build \
+            --file backend/Dockerfile \
+            --tag ${{ env.BACKEND_IMAGE }} \
+            ./backend
+
+      - name: Build Frontend Docker Image
+        run: |
+          docker build \
+            --file frontend/Dockerfile \
+            --tag ${{ env.FRONTEND_IMAGE }} \
+            ./frontend
+
+      # Security Gate: Trivy Scan Backend Image
+      - name: Trivy Vulnerability Scan - Backend Image
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ${{ env.BACKEND_IMAGE }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+
+      # Security Gate: Trivy Scan Frontend Image
+      - name: Trivy Vulnerability Scan - Frontend Image
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+
+      # Authenticate to GitHub Container Registry (Push to main only)
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Publish verified container images with Git SHA tags
+      - name: Publish Images to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ env.BACKEND_IMAGE }}
+          docker push ${{ env.FRONTEND_IMAGE }}
+
+  # ============================================================================
+  # JOB 3: GitOps Version Bump (Rubric M5 & M8)
+  # Updates helm/stockpilot/values-prod.yaml with new SHA and commits back with [skip ci]
+  # Runs ONLY on push to 'main' after successful build, scan, and image publish.
+  # ============================================================================
+  gitops-bump:
+    name: GitOps - Update Production Helm Values
+    needs: build-scan-publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository with Full History
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python for Manifest Validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Update Helm Values & Enforce Verification
+        run: |
+          python -c "
+          import sys, re
+
+          file_path = 'helm/stockpilot/values-prod.yaml'
+          with open(file_path, 'r') as f:
+              content = f.read()
+
+          owner = '${{ github.repository_owner }}'.lower()
+          sha = '${{ github.sha }}'
+
+          backend_repo = f'ghcr.io/{owner}/stockpilot-backend'
+          frontend_repo = f'ghcr.io/{owner}/stockpilot-frontend'
+
+          # Verify expected sections exist
+          if 'backend:' not in content or 'frontend:' not in content:
+              print('ERROR: Missing backend or frontend sections in values-prod.yaml', file=sys.stderr)
+              sys.exit(1)
+
+          # Update backend repository & tag
+          new_content = re.sub(
+              r'(backend:\s*\n\s*image:\s*\n\s*repository:\s*)[^\n]+',
+              rf'\g<1>{backend_repo}',
+              content
+          )
+          new_content = re.sub(
+              r'(backend:\s*\n\s*image:\s*\n\s*repository:[^\n]+\n\s*tag:\s*)[^\n]+',
+              rf'\g<1>\"{sha}\"',
+              new_content
+          )
+
+          # Update frontend repository & tag
+          new_content = re.sub(
+              r'(frontend:\s*\n\s*image:\s*\n\s*repository:\s*)[^\n]+',
+              rf'\g<1>{frontend_repo}',
+              new_content
+          )
+          new_content = re.sub(
+              r'(frontend:\s*\n\s*image:\s*\n\s*repository:[^\n]+\n\s*tag:\s*)[^\n]+',
+              rf'\g<1>\"{sha}\"',
+              new_content
+          )
+
+          # Verify updates actually occurred
+          if sha not in new_content:
+              print('ERROR: Git SHA tag was not successfully injected into values-prod.yaml', file=sys.stderr)
+              sys.exit(1)
+
+          with open(file_path, 'w') as f:
+              f.write(new_content)
+
+          print(f'Successfully updated values-prod.yaml with commit SHA: {sha}')
+          "
+
+      - name: Display Updated values-prod.yaml
+        run: cat helm/stockpilot/values-prod.yaml
+
+      - name: Commit and Push GitOps Tag Update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/stockpilot/values-prod.yaml
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit in values-prod.yaml."
+          else
+            git commit -m "chore(gitops): update image tags to ${{ github.sha }} [skip ci]"
+            git push origin main
+          fi
