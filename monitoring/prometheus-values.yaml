@@ -1,0 +1,106 @@
+# ==============================================================================
+# monitoring/prometheus-values.yaml — kube-prometheus-stack Helm Values
+#
+# WHY:  kube-prometheus-stack installs Prometheus, Grafana, Alertmanager,
+#       and all the required CRDs (including ServiceMonitor) in one Helm release.
+#       This file customises the defaults so it discovers StockPilot metrics
+#       automatically and exposes Grafana with a stable admin password.
+#
+# WHEN: Applied once with:
+#   helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     --namespace monitoring --create-namespace \
+#     --values monitoring/prometheus-values.yaml
+#
+# WHERE: monitoring/ directory — committed to Git.
+# ==============================================================================
+
+# ── Prometheus Configuration ──────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    # By default Prometheus only discovers ServiceMonitors in its own namespace.
+    # Setting these to empty ({}) makes it discover ServiceMonitors cluster-wide,
+    # so the stockpilot ServiceMonitor in the 'stockpilot' namespace is picked up.
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    podMonitorSelector: {}
+    podMonitorNamespaceSelector: {}
+
+    # Retain metrics for 15 days
+    retention: 15d
+
+    # Resource limits for the Prometheus server pod
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+
+# ── Grafana Configuration ─────────────────────────────────────────────────────
+grafana:
+  enabled: true
+
+  # ⚠️  Change this password before any public-facing deployment
+  adminPassword: "StockPilot@Grafana2024"
+
+  # Expose Grafana as a ClusterIP (access via port-forward for demo)
+  service:
+    type: ClusterIP
+    port: 3000
+
+  # Default Grafana ini overrides
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s/"
+    analytics:
+      check_for_updates: false
+
+  # Resource limits for Grafana
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "200m"
+      memory: "512Mi"
+
+  # Pre-configure the Prometheus data source so dashboards work immediately
+  additionalDataSources:
+    - name: Prometheus
+      type: prometheus
+      url: http://kube-prometheus-stack-prometheus:9090
+      access: proxy
+      isDefault: true
+
+# ── Alertmanager ──────────────────────────────────────────────────────────────
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+
+# ── Node Exporter ─────────────────────────────────────────────────────────────
+# Collects OS-level metrics from every worker node (CPU, memory, disk, network)
+nodeExporter:
+  enabled: true
+
+# ── kube-state-metrics ────────────────────────────────────────────────────────
+# Exposes Kubernetes object state metrics (pod status, replica counts, etc.)
+kubeStateMetrics:
+  enabled: true
+
+# ── Prometheus Operator ───────────────────────────────────────────────────────
+prometheusOperator:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
