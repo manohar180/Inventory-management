@@ -26,9 +26,6 @@
 
 ## M2 — Testing & Version Control
 
-- [ ] **pytest-pass.png** — Test suite execution in terminal showing 20 automated tests passing
-  - ![pytest passing](screenshots/pytest-pass.png)
-
 - [x] **github-repo.png** — GitHub repository home page showing public repo and committed structure
   - ![GitHub Repo](screenshots/github-repo.png)
 
@@ -78,8 +75,6 @@
 - [x] **terraform-apply-complete.png** — Terminal showing `terraform apply` completed successfully
   - ![Terraform Apply](screenshots/terraform-apply-complete.png)
 
-- [ ] **aws-vpc.png** — AWS Management Console showing `stockpilot-vpc` with public and private subnets
-  - ![AWS VPC](screenshots/aws-vpc.png)
 
 - [x] **aws-eks-cluster.png** — AWS Management Console showing `stockpilot-eks` cluster in Active state
   - ![AWS EKS Cluster](screenshots/aws-eks-cluster.png)
@@ -112,15 +107,9 @@
 - [x] **helm-lint.png** — Terminal showing `helm lint helm/stockpilot` with 0 failures
   - ![Helm Lint](screenshots/helm-lint.png)
 
-- [ ] **app-via-ingress.png** — Browser showing StockPilot accessed via Ingress hostname / load balancer
-  - ![App via Ingress](screenshots/app-via-ingress.png)
-
 ---
 
 ## M8 — Observability (Prometheus & Grafana)
-
-- [ ] **metrics-endpoint.png** — Browser or curl output of `/metrics` showing Prometheus instrumentation
-  - ![Metrics Endpoint](screenshots/metrics-endpoint.png)
 
 - [x] **prometheus-targets-up.png** — Prometheus Targets page (`/targets`) showing backend ServiceMonitor as UP
   - ![Prometheus Targets UP](screenshots/prometheus-targets-up.png)
