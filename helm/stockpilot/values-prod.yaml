@@ -4,9 +4,9 @@ replicaCount: 1
 backend:
   image:
     repository: ghcr.io/manohar180/stockpilot-backend
-    tag: "135581ddd74e103363519300e63deddb349023a4"
+    tag: "19ba07ee7b0fdbd7cfdbc2046478d39f47a04e08"
 
 frontend:
   image:
     repository: ghcr.io/manohar180/stockpilot-frontend
-    tag: "135581ddd74e103363519300e63deddb349023a4"
+    tag: "19ba07ee7b0fdbd7cfdbc2046478d39f47a04e08"
