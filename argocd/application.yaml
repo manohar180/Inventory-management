@@ -28,6 +28,9 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 
 spec:
+  # The project the application belongs to (default project)
+  project: default
+
   # ── Source: where to read the Helm chart from ───────────────────────────────
   source:
     # ⚠️  REPLACE THIS with your actual GitHub repository URL
@@ -39,6 +42,9 @@ spec:
     helm:
       valueFiles:
         - values-prod.yaml    # CI/CD pipeline updates image tags in this file
+      parameters:
+        - name: hpa.enabled
+          value: "false"
 
   # ── Destination: which cluster and namespace to deploy to ───────────────────
   destination:

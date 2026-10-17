@@ -117,22 +117,10 @@
 
 - [ ] **Grafana dashboard imported** — `StockPilot — Inventory Observability` dashboard open
   - ![Grafana dashboard imported](screenshots/grafana-dashboard.png)
-
-- [ ] **Grafana with live data** — at least 2 panels showing non-zero data (run load-test.sh first)
-  - ![Grafana live panels](screenshots/grafana-live-panels.png)
-
-- [ ] **HPA scaling event** — `kubectl describe hpa -n stockpilot` showing a ScalingActive event
-  - ![HPA scaling event](screenshots/hpa-scaling-event.png)
-
+ 
 ---
 
-## M10 — Documentation & Video (15 pts)
-
-- [ ] **README.md complete** — open in GitHub and show architecture diagram + all sections
-  - ![README on GitHub](screenshots/readme-github.png)
-
-- [ ] **`demo/presentation.pptx`** — open slide deck, show at least slide 1 and 2
-  - ![PPTX slides](screenshots/pptx-slides.png)
+## M9 — ArgoCD GitOps
 
 - [ ] **ArgoCD synced** — ArgoCD UI showing `stockpilot` Application as **Synced / Healthy**
   - ![ArgoCD synced](screenshots/argocd-synced.png)
