@@ -1,9 +1,9 @@
 # ==============================================================================
-# templates/postgres.yaml — PostgreSQL StatefulSet, PVC, Service and Secret
+# templates/postgres.yaml — PostgreSQL Deployment, Service and Secret
 # WHY:  PostgreSQL stores all inventory data. We use a Secret for credentials
-#       (not plain env vars), a PVC so data survives pod restarts, and a
-#       ClusterIP Service so the backend can reach the DB by hostname.
-#       In production, consider RDS or a managed Postgres instead.
+#       (not plain env vars), an emptyDir volume (demo storage, data is lost
+#       if the pod is rescheduled), and a ClusterIP Service so the backend
+#       can reach the DB by hostname. In production, consider RDS or a managed Postgres.
 # ==============================================================================
 
 # ── Kubernetes Secret — DB Credentials ────────────────────────────────────────

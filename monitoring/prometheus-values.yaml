@@ -80,11 +80,11 @@ grafana:
       access: proxy
       isDefault: true
 
-# ── Alertmanager (Disabled to save resources on micro nodes) ──────────────────
+# ── Alertmanager (Disabled to save resources on small nodes) ──────────────────
 alertmanager:
   enabled: false
 
-# ── Node Exporter (Disabled to save resources on micro nodes) ─────────────────
+# ── Node Exporter (Disabled to save resources on small nodes) ─────────────────
 nodeExporter:
   enabled: false
 

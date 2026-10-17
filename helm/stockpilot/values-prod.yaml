@@ -1,5 +1,5 @@
-# values-prod.yaml — Production Environment Overrides (Optimized for t3.micro nodes)
-replicaCount: 1
+# values-prod.yaml - production overrides (image tags are rewritten by CI)
+replicaCount: 2
 
 backend:
   image:
@@ -10,3 +10,10 @@ frontend:
   image:
     repository: ghcr.io/manohar180/stockpilot-frontend
     tag: "19ba07ee7b0fdbd7cfdbc2046478d39f47a04e08"
+
+ingress:
+  host: ""        # empty = match any host, so the AWS load balancer address works in a browser
+
+monitoring:
+  serviceMonitor:
+    enabled: true # requires kube-prometheus-stack to be installed first

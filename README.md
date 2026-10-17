@@ -1,450 +1,901 @@
-Table of Contents
-Overview
-Architecture
-Tech Stack
-Repository Structure
-API Reference
-Quick Start (Docker Compose)
-Testing
-CI/CD Pipeline and DevSecOps
-Containers
-Infrastructure as Code (Terraform)
-Kubernetes and Helm Deployment
-GitOps with ArgoCD
-Observability (Prometheus and Grafana)
-Troubleshooting Lab
-Evidence and Screenshots
-Known Issues and Limitations
-Cleanup
+# StockPilot — Cloud-Native Inventory Management Platform
 
+A full-stack inventory management system built with **FastAPI, React, and PostgreSQL**, supported by a DevSecOps delivery pipeline using Docker, GitHub Actions, Trivy, Terraform, Kubernetes, Helm, ArgoCD, Prometheus, and Grafana.
 
-1. Overview
+StockPilot helps warehouse operators manage products, track stock movements, identify low-stock items, and monitor inventory metrics through a responsive dashboard. The project also demonstrates how an application can be tested, packaged, scanned, deployed, and monitored using modern cloud-native practices.
 
-StockPilot is an inventory management system for a small warehouse. It keeps a product catalogue, records every stock IN and OUT movement in a ledger, flags products that fall to their reorder level, and shows live inventory statistics on a dashboard.
+<p align="center">
+  <img src="demo/screenshots/app-dashboard.png" alt="StockPilot inventory dashboard" width="100%">
+</p>
 
-The application is intentionally small. The real goal of this project is the delivery platform around it: every change that reaches the cluster is tested, scanned, containerised, versioned by Git commit SHA and rolled out automatically.
+<p align="center">
+  <strong>Full-Stack Development · Infrastructure as Code · DevSecOps · GitOps · Observability</strong>
+</p>
 
-Layer	What it does
-Application	FastAPI REST API, React dashboard, PostgreSQL with Alembic migrations
-Quality gate	20 automated tests on an isolated database, run before anything is built
-Security gate	Trivy scans both images and fails the pipeline on HIGH or CRITICAL findings
-Packaging	Multi-stage, non-root Docker images pushed to GHCR, tagged with the commit SHA
-Infrastructure	Terraform builds the AWS VPC and EKS cluster from code
-Deployment	A Helm chart deployed by ArgoCD (GitOps), with probes, autoscaling and an Ingress
-Observability	Prometheus scrapes custom and default metrics, Grafana shows a 6-panel dashboard
-Key features
-Product CRUD with unique SKU enforcement (409 Conflict on duplicates)
-Stock IN / OUT ledger. An OUT larger than current stock is rejected with 400
-Low-stock detection against a per-product reorder level, with search and filter
-Dashboard KPIs: total products, total units, low-stock alerts, total inventory value
-Liveness (/health) and readiness (/ready, checks the database) probes
-Custom Prometheus metrics: stockpilot_stock_movements_total{type} and stockpilot_low_stock_products
-2. Architecture
-Runtime view
-HTTP
-/
-/api
-scrape /metrics every 15s
-queries
-User / Browser
-AWS Load Balancer
-ingress-nginx
-FrontendReact + Nginx :80802 replicas
-BackendFastAPI :80002 replicas
-PostgreSQL 16:5432
-Prometheus
-Grafana
+---
 
-The Ingress sends /api straight to the backend Service and everything else to the frontend Service. The frontend's Nginx also proxies /api to the backend, which is how the app works when only the frontend is exposed (for example with Docker Compose).
+## Table of Contents
 
-Delivery view (GitOps)
-git push to main
-Job 1: Testpytest + frontend build
-Job 2: Build, Scan, Publishdocker build, Trivy, push toGHCR
-Job 3: GitOps bumpwrite new SHA tovalues-prod.yaml
-ArgoCD detects the Gitchange
-Rolling update on EKS
+- [Project Overview](#project-overview)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [Application Screenshots](#application-screenshots)
+- [API Reference](#api-reference)
+- [Getting Started](#getting-started)
+- [Testing](#testing)
+- [Docker and Containerization](#docker-and-containerization)
+- [CI/CD and DevSecOps](#cicd-and-devsecops)
+- [Infrastructure as Code](#infrastructure-as-code)
+- [Kubernetes and Helm](#kubernetes-and-helm)
+- [GitOps with ArgoCD](#gitops-with-argocd)
+- [Monitoring and Observability](#monitoring-and-observability)
+- [Repository Structure](#repository-structure)
+- [Troubleshooting](#troubleshooting)
+- [Known Limitations](#known-limitations)
+- [Cleanup and Cost Management](#cleanup-and-cost-management)
+- [Future Improvements](#future-improvements)
 
-Why GitOps? Git is the single source of truth. The pipeline never runs kubectl against the cluster. It only changes a file in Git, and ArgoCD makes the cluster match that file. Every deployment is therefore a commit that can be reviewed and rolled back.
+---
 
-3. Tech Stack
-Area	Technology
-Backend	Python 3.12, FastAPI, SQLAlchemy 2.x, Alembic, psycopg 3, Pydantic v2
-Frontend	React 18, Vite 6, plain responsive CSS
-Database	PostgreSQL 16
-Containers	Docker multi-stage builds, Docker Compose, non-root users
-CI/CD	GitHub Actions, pytest, GitHub Container Registry (GHCR)
-Security	Trivy image scanning (HIGH and CRITICAL gate)
-Infrastructure	Terraform, AWS VPC, Amazon EKS (managed node group), NAT gateway
-Kubernetes	Helm 3, ingress-nginx, HorizontalPodAutoscaler, metrics-server
-GitOps	ArgoCD (automated sync, prune, self-heal)
-Observability	kube-prometheus-stack (Prometheus, Grafana), ServiceMonitor
-4. Repository Structure
-text
-Inventory-management/
-├── .github/workflows/ci-cd.yml       # test -> build/scan/publish -> gitops bump
-├── backend/
-│   ├── app/                          # main.py, models.py, schemas.py, db.py, config.py
-│   ├── alembic/versions/             # 001_initial_stockpilot_tables.py
-│   ├── tests/                        # conftest.py + test_api.py (20 tests)
-│   ├── Dockerfile                    # python:3.12-slim, non-root uid 10001
-│   ├── pytest.ini
-│   └── requirements.txt
-├── frontend/
-│   ├── src/                          # App.jsx, main.jsx, styles.css
-│   ├── Dockerfile                    # node build stage -> nginx-unprivileged, uid 101
-│   └── nginx.conf                    # serves the SPA, proxies /api
-├── terraform/                        # VPC + EKS (main.tf, variables.tf, outputs.tf, ...)
-├── helm/stockpilot/                  # Chart.yaml, values*.yaml, templates/
-├── k8s/namespace.yaml                # stockpilot namespace
-├── argocd/application.yaml           # GitOps Application
-├── monitoring/                       # prometheus-values.yaml, grafana-dashboard.json
-├── troubleshooting/                  # two intentionally broken manifests + runbook
-├── scripts/load-test.sh              # curl-based traffic generator
-├── demo/                             # presentation.pptx, video, screenshots
-├── docker-compose.yml
-└── README.md
-5. API Reference
+## Project Overview
 
-Interactive documentation is available at /docs (Swagger UI) when the backend is running.
+StockPilot is designed to demonstrate both application development and the engineering practices required to deliver and operate an application in a cloud-native environment.
 
-Method	Endpoint	Description
-GET	/health	Liveness probe
-GET	/ready	Readiness probe (runs SELECT 1 against the database)
-GET	/metrics	Prometheus metrics
-GET	/api/products	List products. Optional ?search= and ?low_stock=true
-POST	/api/products	Create a product (409 if the SKU already exists)
-GET	/api/products/{id}	Get one product (404 if missing)
-PUT	/api/products/{id}	Update a product
-DELETE	/api/products/{id}	Delete a product and its movement history
-POST	/api/products/{id}/movements	Record stock IN or OUT (400 if OUT exceeds stock)
-GET	/api/products/{id}/movements	Movement history, newest first
-GET	/api/inventory/stats	Total products, total units, low-stock count, stock value
+The application provides inventory management capabilities through a React dashboard and a REST API. PostgreSQL stores product and stock movement records, while SQLAlchemy and Alembic handle database access and schema migrations.
 
-Data model
+Around the application, the project implements an automated delivery workflow that tests the code, builds container images, scans them for vulnerabilities, publishes versioned images to GitHub Container Registry (GHCR), and updates Helm configuration for ArgoCD to reconcile.
 
-Table	Columns
-products	id, name, sku (unique), category, price, quantity, reorder_level, created_at
-stock_movements	id, product_id (FK, cascade delete), movement_type (IN/OUT), quantity, note, created_at
-6. Quick Start (Docker Compose)
+### What the project demonstrates
 
-Prerequisite: Docker Desktop with Compose v2.
+- Building a full-stack application with a REST API and relational database.
+- Managing database schema changes through migrations.
+- Writing automated API tests.
+- Containerizing services using Docker.
+- Automating validation and delivery through GitHub Actions.
+- Scanning container images with Trivy.
+- Defining cloud infrastructure using Terraform.
+- Deploying services using Kubernetes and Helm.
+- Applying GitOps principles with ArgoCD.
+- Collecting application metrics with Prometheus and visualizing them in Grafana.
 
-bash
+## Key Features
+
+### Inventory management
+
+- Create, view, update, and delete products.
+- Assign each product a unique SKU.
+- Store product names, categories, prices, quantities, and reorder levels.
+- Search products and filter low-stock items.
+- Record stock IN and OUT transactions.
+- Maintain a history of stock movements.
+- Reject stock OUT transactions that exceed the available quantity.
+- Display inventory statistics, including product counts, stock quantities, low-stock alerts, and inventory value.
+
+### Application reliability
+
+- REST API built with FastAPI.
+- PostgreSQL database with SQLAlchemy ORM.
+- Alembic database migrations.
+- Request validation using Pydantic.
+- Health and readiness endpoints.
+- Automated tests using Pytest.
+- Prometheus instrumentation for application monitoring.
+
+### DevOps and cloud-native delivery
+
+- Docker Compose for local development.
+- Separate backend and frontend container images.
+- GitHub Actions for automated testing and delivery.
+- Trivy vulnerability scanning.
+- GitHub Container Registry for image publishing.
+- Terraform-managed AWS infrastructure.
+- Kubernetes deployments, services, probes, and Helm templates.
+- ArgoCD-based GitOps deployment.
+- Prometheus and Grafana monitoring.
+- Troubleshooting manifests for common Kubernetes failures.
+
+---
+
+## Architecture
+
+### Application architecture
+
+```text
+                       Users / Browser
+                              |
+                              v
+                       React Frontend
+                         Nginx :8080
+                              |
+                              v
+                       FastAPI Backend
+                           :8000
+                         /       \
+                        v         v
+                  PostgreSQL   /metrics
+                     :5432         |
+                                   v
+                               Prometheus
+                                   |
+                                   v
+                                 Grafana
+```
+
+In a Kubernetes deployment, the ingress controller routes application traffic to the frontend or backend services. The backend connects to PostgreSQL and exposes application metrics for Prometheus to scrape.
+
+### CI/CD and GitOps architecture
+
+```text
+Developer pushes code to main
+              |
+              v
+       GitHub Actions
+              |
+              v
+     Automated quality gates
+       - Backend tests
+       - Frontend build
+              |
+              v
+       Build Docker images
+              |
+              v
+        Trivy security scan
+              |
+              v
+       Publish images to GHCR
+              |
+              v
+     Update Helm image tags
+       with commit SHA
+              |
+              v
+          ArgoCD detects
+          Git repository change
+              |
+              v
+       Reconcile Kubernetes
+       with desired Git state
+```
+
+The workflow separates image building and publishing from Kubernetes deployment. The CI pipeline updates the desired image versions in Git, and ArgoCD is responsible for reconciling the cluster with that configuration.
+
+---
+
+## Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | React 18, Vite, CSS |
+| Backend | Python 3.12, FastAPI, Uvicorn |
+| Database | PostgreSQL 16 |
+| ORM and migrations | SQLAlchemy, Alembic |
+| Validation | Pydantic |
+| Testing | Pytest, HTTPX |
+| Containerization | Docker, Docker Compose |
+| CI/CD | GitHub Actions |
+| Container registry | GitHub Container Registry |
+| Security scanning | Trivy |
+| Infrastructure as Code | Terraform, AWS |
+| Container orchestration | Kubernetes, Amazon EKS |
+| Deployment packaging | Helm |
+| GitOps | ArgoCD |
+| Metrics | Prometheus |
+| Dashboards | Grafana |
+
+---
+
+## Application Screenshots
+
+The following screenshots are included in the repository under `demo/screenshots/`.
+
+### Inventory dashboard
+
+![StockPilot dashboard](demo/screenshots/app-dashboard.png)
+
+The dashboard provides an overview of inventory and helps users identify products that require attention.
+
+### Product creation and editing
+
+![Product creation and editing modal](demo/screenshots/app-modal.png)
+
+### Stock movements
+
+![Stock movement interface](demo/screenshots/app-stock-movement.png)
+
+### Low-stock monitoring
+
+![Low-stock products](demo/screenshots/app-low-stock.png)
+
+### REST API documentation
+
+![FastAPI Swagger UI](demo/screenshots/api-swagger.png)
+
+### CI/CD pipeline
+
+![GitHub Actions workflow](demo/screenshots/ci-all-green.png)
+
+### Kubernetes deployment
+
+![Kubernetes pods](demo/screenshots/kubectl-pods.png)
+
+### Monitoring dashboard
+
+![Grafana dashboard](demo/screenshots/grafana-dashboard.png)
+
+Additional infrastructure, CI/CD, Helm, and monitoring evidence is available in the `demo/screenshots/` directory.
+
+---
+
+## API Reference
+
+When the backend is running, interactive API documentation is available at:
+
+**Swagger UI:** http://localhost:8000/docs
+
+**ReDoc:** http://localhost:8000/redoc
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Application health check |
+| GET | `/ready` | Readiness check, including database connectivity |
+| GET | `/metrics` | Prometheus metrics |
+| GET | `/api/products` | List products |
+| POST | `/api/products` | Create a product |
+| GET | `/api/products/{id}` | Retrieve a product |
+| PUT | `/api/products/{id}` | Update a product |
+| DELETE | `/api/products/{id}` | Delete a product |
+| POST | `/api/products/{id}/movements` | Record a stock movement |
+| GET | `/api/products/{id}/movements` | Retrieve stock movement history |
+| GET | `/api/inventory/stats` | Retrieve inventory statistics |
+
+Product listing supports search and low-stock filtering through the available query parameters.
+
+### Example health check
+
+```bash
+curl http://localhost:8000/health
+```
+
+### Example: list products
+
+```bash
+curl http://localhost:8000/api/products
+```
+
+### Example: retrieve inventory statistics
+
+```bash
+curl http://localhost:8000/api/inventory/stats
+```
+
+The API uses appropriate HTTP responses for conditions such as missing products, duplicate SKUs, invalid requests, and insufficient stock.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+For the simplest setup, install:
+
+- [Git](https://git-scm.com/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Docker Compose v2 or later
+
+Python 3.12 and Node.js 22 are useful if you want to run backend tests or develop the frontend outside Docker.
+
+### 1. Clone the repository
+
+```bash
 git clone https://github.com/manohar180/Inventory-management.git
 cd Inventory-management
+```
 
+### 2. Start the application
+
+```bash
 docker compose up --build
-Service	URL
-React dashboard	http://localhost:3000
-API docs (Swagger)	http://localhost:8000/docs
-Health probe	http://localhost:8000/health
-Prometheus metrics	http://localhost:8000/metrics
+```
 
-Startup order is handled for you: postgres starts first and must pass its healthcheck, then backend runs alembic upgrade head and starts Uvicorn, then frontend starts.
+Docker Compose builds the application images and starts PostgreSQL, the backend, and the frontend.
 
-Optional: fill the app with demo data and traffic.
+The backend waits for PostgreSQL to become healthy before starting. Its startup command applies the Alembic migrations before launching the API.
 
-bash
-BASE_URL=http://localhost:8000 DURATION=30 bash scripts/load-test.sh
+### 3. Open the application
 
-Stop everything with docker compose down (add -v to also delete the database volume).
+| Service | URL |
+|---|---|
+| StockPilot dashboard | http://localhost:3000 |
+| FastAPI Swagger UI | http://localhost:8000/docs |
+| API health check | http://localhost:8000/health |
+| API readiness check | http://localhost:8000/ready |
+| Prometheus metrics endpoint | http://localhost:8000/metrics |
 
-7. Testing
+### 4. Stop the application
 
-The suite has 20 tests covering health and readiness probes, the metrics endpoint, product CRUD, validation errors, duplicate SKUs, search, the low-stock filter, stock IN and OUT, the insufficient-stock rule, movement history and inventory statistics.
+```bash
+docker compose down
+```
 
-Tests never touch PostgreSQL. tests/conftest.py creates a fresh in-memory SQLite database for every test and swaps it in through FastAPI's dependency override.
+To also delete the local PostgreSQL data volume:
 
-bash
+```bash
+docker compose down -v
+```
+
+**Warning:** Removing the volume permanently deletes the database data stored in that Docker volume.
+
+---
+
+## Testing
+
+The backend test suite is located in `backend/tests/`.
+
+It covers application health, database readiness, product CRUD operations, validation, duplicate SKUs, product search, low-stock filtering, stock movements, movement history, and inventory statistics.
+
+The test configuration uses an isolated SQLite database rather than the PostgreSQL database used by the application.
+
+### Run tests locally
+
+From the repository root:
+
+**Windows PowerShell**
+
+```powershell
 cd backend
+
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pytest -v                        # expected: 20 passed
-8. CI/CD Pipeline and DevSecOps
+.\.venv\Scripts\Activate.ps1
 
-Workflow file: .github/workflows/ci-cd.yml. It runs on every push to main and on pull requests that target main. Pushes that only change documentation (README.md, demo/**, troubleshooting/**, .gitignore) are skipped on purpose.
+python -m pip install -r requirements.txt
+pytest -v
+```
 
-Job	Runs on	What it does
-1. Test	push and PR	Installs dependencies, runs pytest -v (the build fails if any test fails), then runs npm ci and npm run build
-2. Build, Scan and Publish	after job 1	Builds both images tagged with ${{ github.sha }}, scans both with Trivy, logs in to GHCR and pushes only if both scans pass (push to main only)
-3. GitOps bump	after job 2, main only	Writes the new commit SHA into helm/stockpilot/values-prod.yaml and commits it with [skip ci] so the pipeline does not loop
+**Linux or macOS**
 
-Images are published as:
+```bash
+cd backend
 
-text
-ghcr.io/manohar180/stockpilot-backend:<git-sha>
-ghcr.io/manohar180/stockpilot-frontend:<git-sha>
+python3 -m venv .venv
+source .venv/bin/activate
 
-latest is never used, so every running pod can be traced back to an exact commit.
+python -m pip install -r requirements.txt
+pytest -v
+```
 
-Repository settings the pipeline needs
+Review the final Pytest summary to confirm the actual number of passing tests.
 
-Settings → Actions → General → Workflow permissions → Read and write
-Packages → stockpilot-backend / stockpilot-frontend → Package settings → Public, so the cluster can pull the images without credentials
-Security scan (Trivy)
-bash
-trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 <image>
+The GitHub Actions workflow also runs the backend tests and frontend production build before proceeding to the image publishing stage.
 
-What it scans: the full contents of each built image, meaning the base operating system packages and the Python or Node dependencies installed on top of it.
+---
 
-What the result means: --exit-code 1 makes the step fail when a HIGH or CRITICAL vulnerability is found, so the push to GHCR never runs. An earlier run was blocked by findings in Starlette, the framework FastAPI is built on. One example is CVE-2025-62727 (CVSS 7.5, high): a crafted HTTP Range header can make FileResponse use quadratic CPU time, which allows denial of service. It is fixed in Starlette 0.49.1, so the fix was to upgrade Starlette in requirements.txt, after which both scans pass and the images are published.
+## Docker and Containerization
 
---ignore-unfixed hides vulnerabilities that have no patch yet, because the team cannot act on them. This is a deliberate trade-off and is listed under Known Issues.
+The project uses separate Docker images for the backend and frontend.
 
-9. Containers
-	Backend	Frontend
-Base image	python:3.12-slim-bookworm	build: node:22-alpine, runtime: nginxinc/nginx-unprivileged:alpine-slim
-Build style	single stage, dependencies cached by layer	multi-stage: Node builds the bundle, only static files reach the runtime image
-User	appuser (uid 10001)	nginx (uid 101)
-Port	8000	8080
-Start command	alembic upgrade head && uvicorn app.main:app	nginx -g "daemon off;"
+### Backend
 
-Both images run as non-root, and the Helm chart enforces this again with runAsNonRoot: true in each pod's securityContext.
+The backend container uses Python and Uvicorn to run the FastAPI application. It installs the backend dependencies and runs database migrations during startup.
 
-10. Infrastructure as Code (Terraform)
+### Frontend
 
-Everything lives in terraform/ and uses two community modules: terraform-aws-modules/vpc/aws (5.8.1) and terraform-aws-modules/eks/aws (20.37.1).
+The frontend uses a multi-stage Docker build:
 
-Resource	Details
-VPC	10.30.0.0/16 across 2 Availability Zones
-Subnets	2 public (10.30.101.0/24, 10.30.102.0/24) and 2 private (10.30.1.0/24, 10.30.2.0/24), tagged for EKS load balancers
-Gateways	Internet gateway, plus a single NAT gateway (cost saving) for private-subnet egress
-EKS	Kubernetes 1.31, public and private API endpoint, cluster-creator admin access
-Node group	stockpilot_nodes: default 2 × t3.medium, scales from 2 to 4, Amazon Linux 2023
-Add-ons	CoreDNS, kube-proxy, VPC CNI
-Region	ap-southeast-2 by default. Change aws_region and availability_zones in terraform.tfvars
+1. A Node.js stage installs dependencies and builds the React application.
+2. An Nginx runtime stage serves the generated static assets.
 
-Worker nodes live in the private subnets, so they cannot be reached directly from the internet. Only the load balancer sits in the public subnets.
+This avoids shipping the Node.js build environment in the frontend runtime image.
 
-bash
+### Docker Compose services
+
+| Service | Purpose | Local port |
+|---|---|---|
+| `postgres` | PostgreSQL database | `5432` |
+| `backend` | FastAPI REST API | `8000` |
+| `frontend` | React application served by Nginx | `3000` |
+
+The Compose configuration uses a health check for PostgreSQL and a shared Docker network for communication between services.
+
+---
+
+## CI/CD and DevSecOps
+
+The workflow is defined in `.github/workflows/ci-cd.yml`.
+
+It runs on pushes to `main` and pull requests targeting `main`. Documentation-only changes covered by the configured path exclusions do not trigger the push workflow.
+
+### Pipeline stages
+
+**Stage 1 — Test and build validation**
+
+- Installs backend dependencies.
+- Runs the Pytest suite.
+- Installs frontend dependencies using `npm ci`.
+- Runs the frontend production build.
+
+**Stage 2 — Build, scan, and publish**
+
+- Builds the backend Docker image.
+- Builds the frontend Docker image.
+- Scans both images using Trivy.
+- Publishes the images to GHCR after successful scans on pushes to `main`.
+
+The configured Trivy policy checks HIGH and CRITICAL vulnerabilities and uses `--ignore-unfixed` to skip findings without an available fix.
+
+**Stage 3 — GitOps version update**
+
+- Updates the backend and frontend image tags in `helm/stockpilot/values-prod.yaml`.
+- Uses the Git commit SHA as the image version.
+- Commits and pushes the updated Helm values.
+- Allows ArgoCD to detect the change and reconcile the deployment.
+
+### Container image naming
+
+The workflow publishes images using the following naming convention:
+
+```text
+ghcr.io/manohar180/stockpilot-backend:<commit-sha>
+ghcr.io/manohar180/stockpilot-frontend:<commit-sha>
+```
+
+The actual published tags should be verified in the repository's GitHub Packages page.
+
+### Required GitHub configuration
+
+Check the following settings if the workflow cannot publish packages or push the GitOps update:
+
+- Repository Actions permissions allow the required workflow writes.
+- The workflow has the necessary `packages: write` permission for GHCR.
+- The GitOps job has `contents: write`.
+- The published packages are accessible to the cluster, or registry credentials are configured when required.
+
+The security scan is a delivery gate: a failed scan prevents the normal image publishing path from proceeding.
+
+---
+
+## Infrastructure as Code
+
+The `terraform/` directory contains the Terraform configuration for provisioning AWS infrastructure.
+
+The configuration uses the AWS provider and community VPC and EKS modules.
+
+### Infrastructure components
+
+- Virtual Private Cloud (VPC).
+- Public and private subnets across Availability Zones.
+- Internet Gateway and NAT Gateway.
+- Amazon EKS cluster.
+- Managed Kubernetes node group.
+- Required EKS add-ons.
+- Network configuration and cluster outputs.
+
+The committed example variables use the Mumbai AWS region (`ap-south-1`). Confirm the region and availability zones in your own Terraform variables before applying.
+
+### Provision infrastructure
+
+```bash
 cd terraform
-cp terraform.tfvars.example terraform.tfvars   # git ignores this file
+
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars` as needed, then run:
+
+```bash
 terraform init
 terraform validate
-terraform plan                                 # 59 resources to add
-terraform apply                                # roughly 15-25 minutes
-aws eks update-kubeconfig --region ap-southeast-2 --name stockpilot-eks
+terraform plan
+terraform apply
+```
+
+Review the plan carefully before approving the apply operation.
+
+### Configure kubectl
+
+For the default example region and cluster name:
+
+```bash
+aws eks update-kubeconfig --region ap-south-1 --name stockpilot-eks
 kubectl get nodes
+```
 
-⚠️ Cost warning. An EKS control plane, NAT gateway and worker nodes bill by the hour. Run terraform destroy as soon as you finish (see Cleanup).
+Use the actual region and cluster name if you changed the Terraform variables.
 
-Credentials are never stored in the repository. Terraform reads them from the AWS CLI profile (aws configure). *.tfvars, *.tfstate and .terraform/ are git-ignored, and only terraform.tfvars.example is committed.
+**AWS cost warning:** EKS control planes, EC2 worker nodes, NAT Gateways, and load balancers can incur charges while running. Destroy resources after the evaluation when they are no longer needed.
 
-11. Kubernetes and Helm Deployment
+---
 
-The chart in helm/stockpilot deploys the backend, frontend and PostgreSQL into the stockpilot namespace.
+## Kubernetes and Helm
 
-Resource	Details
-Backend Deployment	2 replicas, /health liveness probe, /ready readiness probe, rolling update with maxUnavailable: 0, non-root
-Frontend Deployment	2 replicas, Nginx on 8080, probes on /, non-root
-PostgreSQL	postgres:16-alpine Deployment, credentials in a Kubernetes Secret, emptyDir demo volume
-Services	ClusterIP for backend (8000), frontend (8080) and postgres (5432), plus a small alias Service named backend for Nginx
-Ingress	/api goes to the backend, / goes to the frontend (ingressClassName: nginx)
-HPA	Backend, CPU target 60%, 2 to 6 replicas. Toggle with hpa.enabled
-ServiceMonitor	Lets Prometheus scrape /metrics every 15 seconds. Toggle with monitoring.serviceMonitor.enabled
+The Helm chart is located in `helm/stockpilot/`.
 
-Values files: values.yaml (defaults), values-dev.yaml (single replica, no Ingress) and values-prod.yaml (image tags, updated automatically by the CI pipeline).
+It defines the Kubernetes resources required to deploy the frontend, backend, and PostgreSQL.
 
-Deploy step by step
+### Deployment components
 
-Order matters. The ServiceMonitor needs the Prometheus CRDs, so the monitoring stack goes in before the application.
+- Backend Deployment and ClusterIP Service.
+- Frontend Deployment and ClusterIP Service.
+- PostgreSQL Deployment, Service, and credential Secret.
+- Ingress rules for frontend and API routing.
+- Liveness and readiness probes.
+- Optional Horizontal Pod Autoscaler configuration.
+- Optional ServiceMonitor for Prometheus.
 
-bash
-# 0. Point kubectl at the cluster
-aws eks update-kubeconfig --region ap-southeast-2 --name stockpilot-eks
+The chart includes environment-specific values:
 
-# 1. metrics-server (needed by the HPA)
-helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
-helm upgrade --install metrics-server metrics-server/metrics-server -n kube-system
+| File | Purpose |
+|---|---|
+| `values.yaml` | Default configuration |
+| `values-dev.yaml` | Development overrides |
+| `values-prod.yaml` | Production image overrides used by the CI/CD workflow |
 
-# 2. Ingress controller (creates the AWS load balancer)
+### Install prerequisites
+
+Configure `kubectl` to use the target cluster, then install the ingress controller and metrics server.
+
+```bash
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx --create-namespace
+helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
+helm repo update
 
-# 3. Prometheus + Grafana (installs the ServiceMonitor CRD)
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace
+
+helm upgrade --install metrics-server metrics-server/metrics-server \
+  --namespace kube-system
+```
+
+Install the monitoring stack before the application if you want Prometheus to discover the application's ServiceMonitor.
+
+```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-  --namespace monitoring --create-namespace \
-  --values monitoring/prometheus-values.yaml
 
-# 4. Namespace and application
+helm upgrade --install kube-prometheus-stack \
+  prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --create-namespace \
+  --values monitoring/prometheus-values.yaml
+```
+
+### Deploy StockPilot
+
+```bash
 kubectl apply -f k8s/namespace.yaml
+
 helm upgrade --install stockpilot helm/stockpilot \
   --namespace stockpilot \
   --values helm/stockpilot/values-prod.yaml
+```
 
-# 5. Verify
-kubectl get pods    -n stockpilot     # everything Running (2 backend, 2 frontend, 1 postgres)
-kubectl get svc     -n stockpilot
+The production values must point to images that exist in GHCR and are accessible to Kubernetes.
+
+### Verify the deployment
+
+```bash
+kubectl get pods -n stockpilot
+kubectl get services -n stockpilot
 kubectl get ingress -n stockpilot
-helm list           -n stockpilot     # STATUS: deployed
-Open the application
-bash
-kubectl get svc -n ingress-nginx ingress-nginx-controller
-# copy the EXTERNAL-IP hostname and open http://<that-hostname> in a browser
+kubectl get hpa -n stockpilot
+helm list -n stockpilot
+```
 
-The load balancer takes a few minutes to become reachable. If your values file keeps the default host stockpilot.local, send the header yourself instead: curl -H "Host: stockpilot.local" http://<that-hostname>/health
+The expected pod count depends on the active values, replica settings, and deployment configuration. Confirm the actual desired and ready replica counts rather than assuming every environment runs the same number of pods.
 
-12. GitOps with ArgoCD
+### Validate the Helm chart
 
-argocd/application.yaml tells ArgoCD to watch helm/stockpilot on the main branch of this repository, using values-prod.yaml, with automated sync, prune and self-heal.
+```bash
+helm lint helm/stockpilot
+```
 
-bash
+For a rendered-manifest check:
+
+```bash
+helm template stockpilot helm/stockpilot \
+  --namespace stockpilot \
+  --values helm/stockpilot/values-prod.yaml
+```
+
+---
+
+## GitOps with ArgoCD
+
+ArgoCD configuration is stored in `argocd/application.yaml`.
+
+The Application tracks the repository's `main` branch and the `helm/stockpilot` chart. Its automated sync policy enables pruning and self-healing.
+
+### Install ArgoCD
+
+```bash
 kubectl create namespace argocd
+
 kubectl apply -n argocd \
   -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
 
-# Admin password
-kubectl -n argocd get secret argocd-initial-admin-secret \
+### Access the ArgoCD interface
+
+Start port forwarding:
+
+```bash
+kubectl port-forward svc/argocd-server \
+  8080:443 \
+  -n argocd
+```
+
+Open https://localhost:8080.
+
+Retrieve the initial administrator password:
+
+```bash
+kubectl get secret argocd-initial-admin-secret \
+  -n argocd \
   -o jsonpath="{.data.password}" | base64 -d && echo
-# Windows PowerShell:
-# kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | % { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
+```
 
-# UI at https://localhost:8080  (user: admin)
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+### Apply the StockPilot Application
 
-Let ArgoCD own the application. If you installed it with helm upgrade --install earlier, remove that release first so the two tools do not fight over the same objects:
+If StockPilot is already installed as a separate Helm release, remove or migrate that release before handing ownership to ArgoCD to avoid resource ownership conflicts.
 
-bash
-helm uninstall stockpilot -n stockpilot
+Then apply the Application:
+
+```bash
 kubectl apply -f argocd/application.yaml
+```
 
-The loop: a push to main runs the pipeline, the pipeline commits a new image SHA to values-prod.yaml, ArgoCD notices the change within a few minutes and performs a rolling update. If someone edits a resource by hand with kubectl, self-heal puts it back to what Git says.
+Check its status:
 
-The Application disables the HPA through hpa.enabled=false. Remove that parameter from argocd/application.yaml to let ArgoCD manage autoscaling too.
+```bash
+kubectl get applications -n argocd
+```
 
-13. Observability (Prometheus and Grafana)
+The application should be verified in the ArgoCD UI for synchronization and health.
 
-The backend exposes Prometheus metrics at /metrics:
+**Configuration note:** The committed ArgoCD Application explicitly sets `hpa.enabled=false`. If autoscaling is required in the ArgoCD-managed deployment, review this override and the resource requests before enabling the HPA.
 
-Metric	Type	Meaning
-http_requests_total	counter	Requests by handler, method and status class (2xx, 4xx, 5xx)
-http_request_duration_seconds	histogram	Request latency, used for p95
-stockpilot_stock_movements_total{type="IN|OUT"}	counter	Custom. Every recorded stock movement
-stockpilot_low_stock_products	gauge	Custom. Products at or below their reorder level
-bash
-# Prometheus: Status > Targets must show the StockPilot backend as UP
-kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring
-# http://localhost:9090/targets
+---
 
-# Grafana: user admin, demo password is in monitoring/prometheus-values.yaml
-kubectl port-forward svc/kube-prometheus-stack-grafana 3000:3000 -n monitoring
-# http://localhost:3000  ->  Dashboards -> Import -> upload monitoring/grafana-dashboard.json
+## Monitoring and Observability
 
-# Generate traffic so every panel has live data (use the Ingress hostname or a port-forward)
-BASE_URL=http://<ingress-hostname> DURATION=300 bash scripts/load-test.sh
+StockPilot exposes application metrics at `/metrics` and includes monitoring configuration in the `monitoring/` directory.
 
-Dashboard: "StockPilot — Inventory Observability" (6 panels)
+### Prometheus
 
-HTTP request rate (req/s)
-p95 request latency (ms)
-5xx error rate (%)
-Requests by endpoint
-Stock movements by type, IN and OUT (custom metric)
-Low-stock products (custom metric)
+The `monitoring/prometheus-values.yaml` file configures the kube-prometheus-stack installation, including ServiceMonitor discovery and resource settings.
 
-Prometheus discovers the application through the chart's ServiceMonitor. monitoring/prometheus-values.yaml makes Prometheus watch ServiceMonitors in all namespaces, so the one in stockpilot is picked up.
+Access Prometheus with port forwarding:
 
-14. Troubleshooting Lab
+```bash
+kubectl port-forward \
+  svc/kube-prometheus-stack-prometheus \
+  9090:9090 \
+  -n monitoring
+```
 
-troubleshooting/ contains two intentionally broken manifests and a runbook:
+Open http://localhost:9090/targets and verify that the StockPilot target is present and healthy.
 
-Scenario	Symptom	Root cause	How to find it
-broken-image.yaml	Pod stuck in ImagePullBackOff	The image tag does not exist in GHCR	kubectl describe pod, read the Events section
-broken-service.yaml	Service has no endpoints, requests fail	Service selector does not match the pod labels	kubectl get endpoints, then compare with kubectl get pods --show-labels
+### Grafana
 
-Quick commands: kubectl get pods, kubectl describe pod <name>, kubectl logs <name> [--previous], kubectl get events --sort-by=.lastTimestamp, kubectl rollout undo deployment/<name>. See troubleshooting/README.md for the full walk-through.
+Start port forwarding:
 
-15. Evidence and Screenshots
-Application
-Dashboard	Add product
-Show Image	Show Image
-Stock IN / OUT	Low-stock filter
-Show Image	Show Image
+```bash
+kubectl port-forward \
+  svc/kube-prometheus-stack-grafana \
+  3000:3000 \
+  -n monitoring
+```
 
-Show Image
+Open http://localhost:3000.
 
-CI/CD and security
+Import `monitoring/grafana-dashboard.json` through the Grafana dashboard import interface. Use the configured credentials for the environment and change the demo password before any public deployment.
 
-Show Image
+### Application metrics
 
-Show Image
+The backend exposes custom metrics for inventory activity, including:
 
-Show Image
+- `stockpilot_stock_movements_total` — stock movement counter by movement type.
+- `stockpilot_low_stock_products` — gauge of products at or below their reorder threshold.
 
-Infrastructure
+The Prometheus instrumentation also collects HTTP request and latency metrics.
 
-Show Image
+### Generate demonstration traffic
 
-Show Image
+The repository includes `scripts/load-test.sh` for generating requests.
 
-Show Image
+For example, from a Bash-compatible shell:
 
-Kubernetes
+```bash
+BASE_URL=http://localhost:8000 DURATION=30 bash scripts/load-test.sh
+```
 
-Show Image
+Use the correct reachable API URL for your environment. In Kubernetes, the local port may need to be forwarded to the backend service first.
 
-Show Image
+---
 
-All evidence files
-Topic	File
-pytest passing	pytest-pass.png
-Docker Compose running	docker-compose-up.png
-Multi-stage frontend Dockerfile	dockerfile-frontend.png
-CI test job	ci-test-job.png
-GitOps commit by the pipeline	ci-gitops-commit.png
-Commit history	github-commits.png
-terraform apply	terraform-apply-complete.png
-AWS VPC	aws-vpc.png
-EKS node group	aws-eks-nodes.png
-helm lint	helm-lint.png
-Pods running	kubectl-pods.png
-Ingress	kubectl-ingress.png
-HPA	kubectl-hpa.png
-App through the load balancer	app-via-ingress.png
-/metrics output	metrics-endpoint.png
-Prometheus targets UP	prometheus-targets-up.png
-Grafana dashboard	grafana-dashboard.png
-ArgoCD synced	argocd-synced.png
-Presentation
-🎬 Video walkthrough: demo/ (MP4 in the folder, or see the repository's Releases if it exceeded 100 MB)
-📊 Slide deck: demo/presentation.pptx (10 slides)
-📝 Video script: demo/VIDEO_SCRIPT.md
-16. Known Issues and Limitations
+## Repository Structure
 
-These are known and deliberate for a time-boxed capstone. Each one has a clear production fix.
+```text
+Inventory-management/
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── db.py
+│   │   └── config.py
+│   ├── alembic/
+│   │   └── versions/
+│   ├── tests/
+│   │   ├── conftest.py
+│   │   └── test_api.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── styles.css
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── vite.config.js
+├── terraform/
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   ├── providers.tf
+│   ├── versions.tf
+│   └── terraform.tfvars.example
+├── helm/
+│   └── stockpilot/
+│       ├── templates/
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       ├── values-dev.yaml
+│       └── values-prod.yaml
+├── k8s/
+│   └── namespace.yaml
+├── argocd/
+│   └── application.yaml
+├── monitoring/
+│   ├── prometheus-values.yaml
+│   └── grafana-dashboard.json
+├── scripts/
+│   └── load-test.sh
+├── troubleshooting/
+│   ├── broken-image.yaml
+│   ├── broken-service.yaml
+│   └── README.md
+├── demo/
+│   ├── screenshots/
+│   ├── presentation.pptx
+│   ├── SCREENSHOTS_CHECKLIST.md
+│   └── VIDEO_SCRIPT.md
+├── docker-compose.yml
+└── README.md
+```
 
-Area	Limitation	Production fix
-Database storage	PostgreSQL runs in the cluster on an emptyDir volume, so data is lost if its pod is rescheduled	Amazon RDS, or an EBS CSI driver with a PersistentVolumeClaim
-Secrets	Demo database and Grafana passwords sit in values files	External Secrets Operator with AWS Secrets Manager, or Sealed Secrets
-TLS	The Ingress serves plain HTTP	cert-manager with a real domain name
-Concurrency	Stock OUT checks the quantity without a row lock, so two simultaneous requests could oversell	SELECT ... FOR UPDATE or an atomic conditional UPDATE
-Test database	Tests run on SQLite, so PostgreSQL-specific behaviour is not exercised in CI	Run tests against a PostgreSQL service container
-Trivy scope	--ignore-unfixed skips vulnerabilities that have no patch yet	Review unfixed findings periodically
-Dependency pins	fastapi, starlette and prometheus-fastapi-instrumentator are not pinned to exact versions	Pin all versions, or use a lock file
-CORS	The API allows all origins	Restrict to the real frontend origin
-NAT gateway	A single NAT gateway is not highly available	One NAT gateway per Availability Zone
-CI trigger	Documentation-only pushes do not start the pipeline (by design)	None needed
-17. Cleanup
+---
 
-AWS bills by the hour, so tear everything down when you are finished. The order matters: the load balancer created by ingress-nginx must be gone before Terraform can delete the VPC.
+## Troubleshooting
 
-bash
-# 1. Stop ArgoCD managing the app, then remove the apps and the load balancer
-kubectl delete -f argocd/application.yaml
-helm uninstall stockpilot -n stockpilot            # skip if ArgoCD already removed it
-helm uninstall ingress-nginx -n ingress-nginx
-helm uninstall kube-prometheus-stack -n monitoring
+### Backend cannot connect to PostgreSQL
 
-# 2. Wait a few minutes until the load balancer disappears
-#    (AWS Console -> EC2 -> Load Balancers)
+- Check the PostgreSQL container status.
+- Review the `DATABASE_URL` environment variable.
+- Confirm that the database health check passes.
+- Review backend logs.
 
-# 3. Destroy the infrastructure
+```bash
+docker compose ps
+docker compose logs backend
+docker compose logs postgres
+```
+
+### Kubernetes pod is stuck in ImagePullBackOff
+
+```bash
+kubectl get pods -n stockpilot
+kubectl describe pod <pod-name> -n stockpilot
+```
+
+Check the image repository, tag, registry access, and pod events.
+
+### Service has no endpoints
+
+```bash
+kubectl get services -n stockpilot
+kubectl get endpoints -n stockpilot
+kubectl get pods -n stockpilot --show-labels
+```
+
+Compare the Service selector with the labels on the target pods.
+
+### Application is not ready
+
+```bash
+kubectl describe pod <pod-name> -n stockpilot
+kubectl logs <pod-name> -n stockpilot
+kubectl get events -n stockpilot --sort-by=.lastTimestamp
+```
+
+Check readiness probe failures, environment variables, database connectivity, and startup logs.
+
+For more detailed troubleshooting, see [`troubleshooting/README.md`](troubleshooting/README.md).
+
+---
+
+## Known Limitations
+
+StockPilot is an educational cloud-native capstone project. The following items should be addressed before treating it as a production system.
+
+| Area | Current consideration |
+|---|---|
+| Database persistence | The Kubernetes PostgreSQL manifest uses `emptyDir`; database data can be lost when the pod is replaced. |
+| Database high availability | The demo database deployment is not a highly available managed database service. |
+| Secrets | Demo credentials are present in configuration values and should be replaced with a proper secrets-management solution. |
+| Transport security | Configure TLS and a real domain before exposing the application publicly. |
+| Concurrent stock updates | Stock movement operations should use suitable database locking or atomic updates to prevent concurrent requests from overselling stock. |
+| Automated tests | The test suite uses SQLite, so PostgreSQL-specific behaviour is not fully covered. |
+| Vulnerability scanning | The Trivy policy ignores unfixed vulnerabilities; scan results should be reviewed regularly. |
+| Autoscaling | The ArgoCD Application currently disables the HPA through a Helm parameter. |
+| AWS cost and availability | A single NAT Gateway and demo-oriented infrastructure are not a fully resilient production design. |
+
+These limitations are documented to distinguish a working capstone implementation from a production-hardened service.
+
+---
+
+## Cleanup and Cost Management
+
+If you created AWS resources for a demonstration, clean them up when finished.
+
+First, remove the StockPilot Application and associated resources according to the current ArgoCD ownership state. Remove the ingress controller and wait for its AWS load balancer to be deleted before destroying the VPC.
+
+After checking that the cluster is no longer needed:
+
+```bash
 cd terraform
 terraform destroy
+```
 
-Afterwards, open the AWS Console and confirm that the EKS cluster, NAT gateway, Elastic IPs and load balancers are really gone.
+Review the destruction plan before confirming. Then check the AWS Console for remaining EKS clusters, EC2 instances, NAT Gateways, Elastic IP addresses, and load balancers.
+
+Do not run `terraform destroy` against infrastructure that other applications or users depend on.
+
+---
+
+## Future Improvements
+
+Potential next steps include:
+
+- Use Amazon RDS or persistent EBS-backed storage for PostgreSQL.
+- Manage secrets with AWS Secrets Manager and an external-secrets integration.
+- Enable TLS using cert-manager and a domain name.
+- Add database-backed integration tests to CI.
+- Improve concurrency handling for stock updates.
+- Add role-based authentication and authorization.
+- Configure alerting for application failures and resource saturation.
+- Enable and validate Kubernetes autoscaling where appropriate.
+- Add a reproducible end-to-end deployment test.
+- Add a recorded demonstration showing the complete CI/CD and GitOps workflow.
+
+---
+
+## Project Resources
+
+- **GitHub repository:** https://github.com/manohar180/Inventory-management
+- **Backend API documentation:** http://localhost:8000/docs (when running locally)
+- **Infrastructure configuration:** [`terraform/`](terraform/)
+- **Kubernetes Helm chart:** [`helm/stockpilot/`](helm/stockpilot/)
+- **CI/CD workflow:** [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)
+- **Monitoring configuration:** [`monitoring/`](monitoring/)
+- **Demonstration evidence:** [`demo/screenshots/`](demo/screenshots/)
+- **Presentation:** [`demo/presentation.pptx`](demo/presentation.pptx)
+
+---
+
+*StockPilot — Inventory management with automated delivery, cloud-native deployment, and observability.*

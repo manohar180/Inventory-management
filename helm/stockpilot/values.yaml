@@ -93,7 +93,7 @@ postgres:
   username: stockpilot
   password: stockpilotpass   # CHANGE THIS for any non-local deployment
 
-  storage: 5Gi               # PVC size for postgres data
+  storage: 5Gi               # reserved for a future PersistentVolumeClaim; currently unused (emptyDir)
 
   resources:
     requests:

@@ -10,9 +10,6 @@
 #
 # WHEN: Applied once after ArgoCD is installed:
 #       kubectl apply -f argocd/application.yaml -n argocd
-#
-# ⚠️  REPLACE the repoURL below with your actual GitHub repository URL.
-#     Search for "REPLACE_WITH_YOUR_GITHUB_REPO_URL" and update it.
 # ==============================================================================
 
 apiVersion: argoproj.io/v1alpha1
@@ -33,7 +30,6 @@ spec:
 
   # ── Source: where to read the Helm chart from ───────────────────────────────
   source:
-    # ⚠️  REPLACE THIS with your actual GitHub repository URL
     repoURL: https://github.com/manohar180/Inventory-management.git
     targetRevision: main      # Always track the main branch
     path: helm/stockpilot     # Path to the Helm chart inside the repo

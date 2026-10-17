@@ -1,132 +1,144 @@
-# demo/SCREENSHOTS_CHECKLIST.md — Every Screenshot the Rubric Requires
+# StockPilot — Submission Evidence & Screenshots Checklist
 
+> Cross-referenced against `README.md` evidence table and capstone rubric (M1–M10).
+> Status is checked `[x]` only when the file is confirmed present in `demo/screenshots/`.
 
-## M1 — Application 
+---
 
-- [x] **App running in browser** — `http://localhost:3000` showing the StockPilot dashboard with KPI cards and product table
+## M1 — Application
 
+- [x] **app-dashboard.png** — StockPilot React dashboard running with KPI cards and product catalogue
   - ![App Dashboard](screenshots/app-dashboard.png)
 
-- [ ] **Add/Edit product modal** — open the modal and show a product being created
-  - ![Add/Edit product modal](screenshots/app-modal.png)
+- [x] **app-modal.png** — Add/Edit product modal showing creation form
+  - ![Add/Edit Product Modal](screenshots/app-modal.png)
 
-- [ ] **Stock IN/OUT** — show a stock movement being added
+- [x] **app-stock-movement.png** — Stock movement ledger showing IN/OUT adjustments
   - ![Stock IN/OUT](screenshots/app-stock-movement.png)
 
-- [ ] **Low-stock badge visible** — filter on `?low_stock=true`, show the badge
-  - ![Low-stock badge visible](screenshots/app-low-stock.png)
+- [x] **app-low-stock.png** — Low stock badge filter (`?low_stock=true`) showing filtered catalogue
+  - ![Low Stock Filter](screenshots/app-low-stock.png)
 
-- [ ] **FastAPI Swagger docs** — `http://localhost:8000/docs` showing all endpoints
-  - ![FastAPI Swagger docs](screenshots/api-swagger.png)
-
----
-
-## M2 — Version Control / Git
-
-- [ ] **GitHub repository page** — show public repo with all files committed
-  - ![GitHub repository page](screenshots/github-repo.png)
-
-- [ ] **Commit history** — at least one commit per step
-  - ![Commit history](screenshots/github-commits.png)
+- [x] **api-swagger.png** — FastAPI interactive Swagger documentation (`/docs`) showing all endpoints
+  - ![Swagger UI](screenshots/api-swagger.png)
 
 ---
 
-## M3 — Docker
+## M2 — Testing & Version Control
 
-- [ ] **docker compose up** — terminal showing all 3 services started
-  - Command: `docker compose up --build`
-  - ![docker compose up](screenshots/docker-compose-up.png)
+- [ ] **pytest-pass.png** — Test suite execution in terminal showing 20 automated tests passing
+  - ![pytest passing](screenshots/pytest-pass.png)
 
-- [ ] **Multi-stage frontend Dockerfile** — open `frontend/Dockerfile` in editor to show build stages
-  - ![Multi-stage frontend Dockerfile](screenshots/dockerfile-frontend.png)
+- [x] **github-repo.png** — GitHub repository home page showing public repo and committed structure
+  - ![GitHub Repo](screenshots/github-repo.png)
+
+- [x] **github-commits.png** — Git commit history showing meaningful commits across development stages
+  - ![GitHub Commits](screenshots/github-commits.png)
 
 ---
 
-## M4 — CI/CD Pipeline
+## M3 — Containerisation
 
-- [ ] **GitHub Actions green run** — all 3 jobs (test, build-scan-publish, gitops-bump) green
-  - URL: `https://github.com/manohar180/Inventory-management/actions`
-  - ![GitHub Actions green run](screenshots/ci-all-green.png)
+- [x] **docker-compose-up.png** — Terminal showing `docker compose up --build` with all 3 services healthy
+  - ![Docker Compose](screenshots/docker-compose-up.png)
 
-- [ ] **Test job detail** — show pytest output inside the Actions log
-  - ![Test job detail](screenshots/ci-test-job.png)
+- [x] **dockerfile-frontend.png** — Multi-stage frontend `Dockerfile` open in editor showing build & runtime stages
+  - ![Frontend Dockerfile](screenshots/dockerfile-frontend.png)
 
-- [ ] **Trivy scan output** — show the scan running inside the build job, "No vulnerabilities found"
-  - ![Trivy scan output](screenshots/ci-trivy-scan.png)
+---
 
-- [ ] **gitops-bump commit** — show the auto-commit that updated `values-prod.yaml` with `[skip ci]`
-  - ![gitops-bump commit](screenshots/ci-gitops-commit.png)
+## M4 — CI/CD Pipeline & DevSecOps
+
+- [x] **ci-all-green.png** — GitHub Actions workflow run with all 3 jobs green (test, build-scan-publish, gitops-bump)
+  - ![CI/CD All Green](screenshots/ci-all-green.png)
+
+- [x] **ci-test-job.png** — Actions test job detail log showing automated tests passing
+  - ![CI Test Job](screenshots/ci-test-job.png)
+
+- [x] **ci-trivy-scan.png** — Trivy container vulnerability scan log showing 0 HIGH/CRITICAL vulnerabilities
+  - ![Trivy Scan](screenshots/ci-trivy-scan.png)
+
+- [x] **ci-gitops-commit.png** — Automated GitOps commit by GitHub Actions updating `values-prod.yaml`
+  - ![GitOps Bump Commit](screenshots/ci-gitops-commit.png)
 
 ---
 
 ## M5 — Container Registry
 
-- [ ] **GHCR packages page** — `https://github.com/manohar180?tab=packages` showing both images
-  - ![GHCR packages page](screenshots/packages.png)
+- [x] **packages.png** — GitHub Packages (GHCR) page showing SHA-tagged backend and frontend images
+  - ![GHCR Packages](screenshots/packages.png)
 
 ---
 
-## M6 — Terraform / IaC
+## M6 — Infrastructure as Code (Terraform)
 
-- [ ] **`terraform plan` output** — full plan output in terminal (all resources to be created)
-  - Command: `cd terraform && terraform plan`
-  - ![terraform plan output](screenshots/terraform-plan.png)
+- [x] **terraform-plan.png** — Terminal showing `terraform plan` execution for VPC and EKS cluster
+  - ![Terraform Plan](screenshots/terraform-plan.png)
 
-- [ ] **`terraform apply` success** — final "Apply complete! Resources: X added"
-  - ![terraform apply success](screenshots/terraform-apply-complete.png)
+- [x] **terraform-apply-complete.png** — Terminal showing `terraform apply` completed successfully
+  - ![Terraform Apply](screenshots/terraform-apply-complete.png)
 
-- [ ] **AWS Console — EKS cluster** — `stockpilot-eks` → Overview tab (Active status)
-  - ![AWS Console EKS cluster](screenshots/aws-eks-cluster.png)
+- [ ] **aws-vpc.png** — AWS Management Console showing `stockpilot-vpc` with public and private subnets
+  - ![AWS VPC](screenshots/aws-vpc.png)
 
-- [ ] **AWS Console — EKS Node Group** — show `stockpilot_nodes` with 2 nodes Running
-  - ![AWS Console EKS Node Group](screenshots/aws-eks-nodes.png)
+- [x] **aws-eks-cluster.png** — AWS Management Console showing `stockpilot-eks` cluster in Active state
+  - ![AWS EKS Cluster](screenshots/aws-eks-cluster.png)
 
+- [x] **aws-eks-nodes.png** — AWS Management Console showing EKS Managed Node Group with active worker nodes
+  - ![AWS EKS Nodes](screenshots/aws-eks-nodes.png)
 
-- [ ] **`terraform destroy` complete** — "Destroy complete! Resources: X destroyed"
-  - ![terraform destroy complete](screenshots/terraform-destroy.png)
-
----
-
-## M7 — Kubernetes + Helm
-
-- [ ] **`kubectl get pods -n stockpilot`** — all pods Running (backend×2, frontend×2, postgres×1)
-  - ![kubectl get pods](screenshots/kubectl-pods.png)
-
-- [ ] **`kubectl get svc -n stockpilot`** — services listed with ClusterIP
-  - ![kubectl get svc](screenshots/kubectl-services.png)
-
-- [ ] **`kubectl get ingress -n stockpilot`** — Ingress with ADDRESS populated
-  - ![kubectl get ingress](screenshots/kubectl-ingress.png)
-
-- [ ] **`kubectl get hpa -n stockpilot`** — HPA showing TARGETS and MINPODS/MAXPODS
-  - ![kubectl get hpa](screenshots/kubectl-hpa.png)
-
-- [ ] **`helm list -n stockpilot`** — chart showing STATUS=deployed
-  - ![helm list](screenshots/helm-list.png)
-
-- [ ] **`helm lint` passing** — no chart failures
-  - Command: `helm lint helm/stockpilot`
-  - ![helm lint](screenshots/helm-lint.png)
+- [x] **terraform-destroy.png** — Terminal showing `terraform destroy` completion
+  - ![Terraform Destroy](screenshots/terraform-destroy.png)
 
 ---
 
-## M8 — Observability
+## M7 — Kubernetes & Helm Deployment
 
-- [ ] **Prometheus Targets page** — `http://localhost:9090/targets` showing stockpilot backend **UP**
+- [x] **kubectl-pods.png** — Terminal showing `kubectl get pods -n stockpilot` with all pods in Running state
+  - ![Kubectl Pods](screenshots/kubectl-pods.png)
+
+- [x] **kubectl-services.png** — Terminal showing `kubectl get svc -n stockpilot` with ClusterIP services
+  - ![Kubectl Services](screenshots/kubectl-services.png)
+
+- [x] **kubectl-ingress.png** — Terminal showing `kubectl get ingress -n stockpilot`
+  - ![Kubectl Ingress](screenshots/kubectl-ingress.png)
+
+- [x] **kubectl-hpa.png** — Terminal showing `kubectl get hpa -n stockpilot` with CPU target and replica limits
+  - ![Kubectl HPA](screenshots/kubectl-hpa.png)
+
+- [x] **helm-list.png** — Terminal showing `helm list -n stockpilot` with deployed release
+  - ![Helm List](screenshots/helm-list.png)
+
+- [x] **helm-lint.png** — Terminal showing `helm lint helm/stockpilot` with 0 failures
+  - ![Helm Lint](screenshots/helm-lint.png)
+
+- [ ] **app-via-ingress.png** — Browser showing StockPilot accessed via Ingress hostname / load balancer
+  - ![App via Ingress](screenshots/app-via-ingress.png)
+
+---
+
+## M8 — Observability (Prometheus & Grafana)
+
+- [ ] **metrics-endpoint.png** — Browser or curl output of `/metrics` showing Prometheus instrumentation
+  - ![Metrics Endpoint](screenshots/metrics-endpoint.png)
+
+- [x] **prometheus-targets-up.png** — Prometheus Targets page (`/targets`) showing backend ServiceMonitor as UP
   - ![Prometheus Targets UP](screenshots/prometheus-targets-up.png)
 
-- [ ] **Grafana dashboard imported** — `StockPilot — Inventory Observability` dashboard open
-  - ![Grafana dashboard imported](screenshots/grafana-dashboard.png)
- 
----
-
-## M9 — ArgoCD GitOps
-
-- [ ] **ArgoCD synced** — ArgoCD UI showing `stockpilot` Application as **Synced / Healthy**
-  - ![ArgoCD synced](screenshots/argocd-synced.png)
-
-- [ ] **ArgoCD app tree** — show the resource tree (deployments, services, ingress all green)
-  - ![ArgoCD app tree](screenshots/argocd-tree.png)
+- [x] **grafana-dashboard.png** — Grafana dashboard (`StockPilot — Inventory Observability`) imported and active
+  - ![Grafana Dashboard](screenshots/grafana-dashboard.png)
 
 ---
 
+## M9 — GitOps (ArgoCD)
+
+- [x] **argocd-synced.png** — ArgoCD web UI showing `stockpilot` application in **Synced** & **Healthy** state
+  - ![ArgoCD Synced](screenshots/argocd-synced.png)
+
+---
+
+## M10 — Documentation & Video Deliverables
+
+- [x] **README.md** — Complete documentation with architecture, setup, testing, and evidence table
+- [x] **demo/presentation.pptx** — 10-slide capstone slide deck
+- [x] **demo/VIDEO_SCRIPT.md** — Timed presentation walkthrough script

@@ -12,7 +12,7 @@
 variable "aws_region" {
   description = "AWS region where all resources will be created."
   type        = string
-  default     = "ap-south-1" # Mumbai — lowest latency for India-based projects
+  default     = "ap-southeast-2" # Sydney — default deployment region
 }
 
 variable "environment" {
@@ -43,7 +43,7 @@ variable "vpc_cidr" {
 variable "availability_zones" {
   description = "List of AZs to use (must have at least 2 for EKS HA)."
   type        = list(string)
-  default     = ["ap-south-1a", "ap-south-1b"]
+  default     = ["ap-southeast-2a", "ap-southeast-2b"]
 }
 
 variable "private_subnet_cidrs" {

@@ -33,7 +33,7 @@
 #   # Edit the service to use the correct selector:
 #   kubectl patch svc stockpilot-backend-broken-svc -n stockpilot \
 #     --type='json' \
-#     -p='[{"op":"replace","path":"/spec/selector/app.kubernetes.io~1component","value":"backend"}]'
+#     -p='[{"op":"replace","path":"/spec/selector","value":{"app.kubernetes.io/component":"backend","app.kubernetes.io/instance":"stockpilot"}}]'
 #
 #   # OR: delete this broken service
 #   kubectl delete -f troubleshooting/broken-service.yaml -n stockpilot

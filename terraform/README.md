@@ -17,7 +17,7 @@ This directory provisions the AWS cloud infrastructure required to run StockPilo
 | **NAT Gateway** | Single NAT (cost-saving) lets private nodes pull images |
 | **EKS Cluster** | Kubernetes 1.31, public endpoint |
 | **Managed Node Group** | 2× t3.medium worker nodes (scales to 4) |
-| **EKS Add-ons** | CoreDNS, kube-proxy, vpc-cni, aws-ebs-csi-driver |
+| **EKS Add-ons** | CoreDNS, kube-proxy, vpc-cni |
 
 ---
 
@@ -35,7 +35,7 @@ aws sso login --profile your-profile
 # Option B — Environment variables (never commit these!)
 export AWS_ACCESS_KEY_ID="AKIA..."
 export AWS_SECRET_ACCESS_KEY="..."
-export AWS_DEFAULT_REGION="ap-south-1"
+export AWS_DEFAULT_REGION="ap-southeast-2"
 ```
 
 ---
@@ -76,7 +76,7 @@ terraform apply
 After apply completes, run the printed `kubeconfig_command` output:
 
 ```bash
-aws eks update-kubeconfig --region ap-south-1 --name stockpilot-eks
+aws eks update-kubeconfig --region ap-southeast-2 --name stockpilot-eks
 kubectl get nodes   # Should show 2 Ready nodes
 ```
 
@@ -112,8 +112,8 @@ terraform destroy
 | # | Screenshot | Where to capture |
 |---|-----------|-----------------|
 | 1 | `terraform plan` output | Terminal |
-| 2 | AWS Console → VPC → Your VPC | ap-south-1 console |
-| 3 | AWS Console → EKS → stockpilot-eks cluster | ap-south-1 console |
+| 2 | AWS Console → VPC → Your VPC | ap-southeast-2 console |
+| 3 | AWS Console → EKS → stockpilot-eks cluster | ap-southeast-2 console |
 | 4 | `kubectl get nodes` (2 Ready) | Terminal after `update-kubeconfig` |
 | 5 | `terraform destroy` completion | Terminal |
 

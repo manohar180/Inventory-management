@@ -26,8 +26,7 @@ metadata:
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
-    - host: {{ .Values.ingress.host }}
-      http:
+    - http:
         paths:
           # /api → backend FastAPI (8000)
           # ORDER MATTERS: more specific paths must come first
@@ -46,4 +45,7 @@ spec:
                 name: {{ include "stockpilot.fullname" . }}-frontend
                 port:
                   number: {{ .Values.frontend.service.port }}
+      {{- if .Values.ingress.host }}
+      host: {{ .Values.ingress.host | quote }}
+      {{- end }}
 {{- end }}

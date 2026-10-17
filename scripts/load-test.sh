@@ -129,11 +129,11 @@ while true; do
 
     # ── Stock IN movement (restocking) ──────────────────────────────────────
     echo -n "in=$(hit POST /api/products/${PID}/movements \
-      '{\"movement_type\":\"IN\",\"quantity\":5,\"note\":\"load-test restock\"}') "
+      '{"movement_type":"IN","quantity":5,"note":"load-test restock"}') "
 
     # ── Stock OUT movement (sale/dispatch) ──────────────────────────────────
     echo -n "out=$(hit POST /api/products/${PID}/movements \
-      '{\"movement_type\":\"OUT\",\"quantity\":2,\"note\":\"load-test dispatch\"}') "
+      '{"movement_type":"OUT","quantity":2,"note":"load-test dispatch"}') "
 
     # ── Movement history ────────────────────────────────────────────────────
     echo -n "moves=$(hit GET /api/products/${PID}/movements) "

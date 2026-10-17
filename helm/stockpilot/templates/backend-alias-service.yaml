@@ -1,0 +1,26 @@
+# ==============================================================================
+# templates/backend-alias-service.yaml — Service Alias for Frontend Upstream
+# WHY:  frontend/nginx.conf proxies /api to http://backend:8000. In Kubernetes,
+#       the primary Service is named <release>-stockpilot-backend. This alias
+#       allows Nginx to resolve "backend" directly without crashing on startup.
+# WHEN: Deployed with the chart into the target namespace.
+# WHERE: helm/stockpilot/templates/ — committed to Git.
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend-alias
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "stockpilot.backendSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP

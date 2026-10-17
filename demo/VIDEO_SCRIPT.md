@@ -27,9 +27,9 @@
 
 - **Slide 1**: "Hi, I'm presenting StockPilot — a cloud-native inventory management system built as my DevOps final capstone."
 - **Slide 2**: "The tech stack is FastAPI on the backend, React + Vite on the frontend, PostgreSQL for storage, and a full DevSecOps pipeline."
-- **Slide 3**: "The architecture has an AWS ALB → Nginx Ingress, routing `/api` to the FastAPI backend and `/` to the React frontend. Both run as 2 replicas with HPA."
+- **Slide 3**: "The architecture has an AWS load balancer → Nginx Ingress, routing `/api` to the FastAPI backend and `/` to the React frontend. Both run as 2 replicas with HPA."
 - **Slide 4**: "The CI/CD pipeline has 3 jobs: test, build+scan, and GitOps bump. Trivy blocks any HIGH or CRITICAL CVE from reaching production."
-- **Slide 5**: "Trivy found three real starlette CVEs in our image. I fixed all three by pinning `starlette>=1.3.1` in requirements.txt."
+- **Slide 5**: "Trivy blocked the pipeline on a HIGH-severity Starlette vulnerability (for example CVE-2025-62727, a denial of service through the HTTP Range header). I fixed it by upgrading Starlette in requirements.txt."
 - **Slides 6–9**: Brief walk (30 seconds each) covering Terraform, Kubernetes/Helm, ArgoCD, and Observability.
 - **Slide 10**: "The key learning is that GitOps, security scanning, and IaC together create a system where every change is auditable, reproducible, and safe."
 
@@ -142,7 +142,7 @@ kubectl port-forward svc/kube-prometheus-stack-grafana 3000:3000 -n monitoring
 ### [8:30–end] — Wrap Up
 
 - "That completes the StockPilot DevOps capstone walkthrough."
-- "We covered: full-stack app, 12+ tests, Trivy security gate, GHCR images, Terraform EKS, Helm chart with HPA and Ingress, ArgoCD GitOps, and Prometheus/Grafana observability."
+- "We covered: full-stack app, 20 tests, Trivy security gate, GHCR images, Terraform EKS, Helm chart with HPA and Ingress, ArgoCD GitOps, and Prometheus/Grafana observability."
 - Show `demo/SCREENSHOTS_CHECKLIST.md` briefly as evidence all items are captured.
 - "Thank you."
 

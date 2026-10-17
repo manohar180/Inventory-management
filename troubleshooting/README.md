@@ -114,7 +114,7 @@ kubectl get endpoints stockpilot-backend-broken-svc -n stockpilot
 
 kubectl port-forward svc/stockpilot-backend-broken-svc 9999:8000 -n stockpilot &
 curl http://localhost:9999/health
-# {"status":"healthy"}   ← working
+# {"status":"ok","app":"stockpilot","version":"1.0.0"}   ← working
 ```
 
 ---
