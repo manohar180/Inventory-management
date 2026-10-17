@@ -1,17 +1,39 @@
-# values-prod.yaml — Production Environment Overrides
-# WHY:  Production needs HA (2+ replicas), Ingress exposed, HPA active,
-#       and real GHCR image tags (injected by GitHub Actions CI/CD pipeline).
-# This file is watched by ArgoCD. The CI/CD pipeline automatically updates
-# the image tags here after a successful build, scan, and push.
-
-replicaCount: 2
+# values-prod.yaml — Production Environment Overrides (Optimized for t3.micro nodes)
+replicaCount: 1
 
 backend:
   image:
     repository: ghcr.io/manohar180/stockpilot-backend
     tag: "a26c7a528b30fb87efff1a58192827abc9441211"
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
 
 frontend:
   image:
     repository: ghcr.io/manohar180/stockpilot-frontend
     tag: "a26c7a528b30fb87efff1a58192827abc9441211"
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+
+postgres:
+  storage: 5Gi
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+
+hpa:
+  enabled: false

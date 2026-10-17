@@ -56,7 +56,6 @@ backend:
     runAsNonRoot: true
     runAsUser: 10001
     runAsGroup: 10001
-    readOnlyRootFilesystem: false  # alembic needs to write tmp files
 
 # ── Frontend Configuration ────────────────────────────────────────────────────
 frontend:
@@ -82,7 +81,6 @@ frontend:
     runAsNonRoot: true
     runAsUser: 101
     runAsGroup: 101
-    readOnlyRootFilesystem: false
 
 # ── PostgreSQL Configuration ──────────────────────────────────────────────────
 postgres:
@@ -126,7 +124,7 @@ hpa:
 monitoring:
   serviceMonitor:
     # Set to true only when kube-prometheus-stack is installed in the cluster
-    enabled: true
+    enabled: false
     # The 'release' label must match the Helm release name of kube-prometheus-stack
     prometheusRelease: kube-prometheus-stack
     interval: 15s

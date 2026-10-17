@@ -28,10 +28,7 @@
 
 - [ ] **Commit history** — at least one commit per step
   - ![Commit history](screenshots/github-commits.png)
-
-- [ ] **`.gitignore` working** — confirm no `.env`, `*.tfstate`, `node_modules` in repo
-  - Verify by checking the repo file tree in GitHub browser
-
+  
 ---
 
 ## M3 — Docker

@@ -22,22 +22,6 @@ stringData:
   POSTGRES_PASSWORD: {{ .Values.postgres.password | quote }}
   POSTGRES_DB: {{ .Values.postgres.database | quote }}
 ---
-# ── PersistentVolumeClaim — Postgres Data Volume ──────────────────────────────
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: stockpilot-postgres-pvc
-  namespace: {{ .Values.namespace }}
-  labels:
-    {{- include "stockpilot.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - ReadWriteOnce           # One node can mount this at a time (fine for Postgres)
-  resources:
-    requests:
-      storage: {{ .Values.postgres.storage }}
-  # storageClassName defaults to the cluster default (gp2 on EKS, standard on kind)
----
 # ── Deployment — PostgreSQL ───────────────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
@@ -89,8 +73,7 @@ spec:
             {{- toYaml .Values.postgres.resources | nindent 12 }}
       volumes:
         - name: postgres-data
-          persistentVolumeClaim:
-            claimName: stockpilot-postgres-pvc
+          emptyDir: {}
 ---
 # ── ClusterIP Service — PostgreSQL ────────────────────────────────────────────
 apiVersion: v1
