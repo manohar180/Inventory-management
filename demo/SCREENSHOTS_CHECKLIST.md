@@ -28,7 +28,7 @@
 
 - [ ] **Commit history** — at least one commit per step
   - ![Commit history](screenshots/github-commits.png)
-  
+
 ---
 
 ## M3 — Docker
@@ -87,7 +87,7 @@
 
 ---
 
-## M8 — Kubernetes + Helm (15 pts)
+## M7 — Kubernetes + Helm
 
 - [ ] **`kubectl get pods -n stockpilot`** — all pods Running (backend×2, frontend×2, postgres×1)
   - ![kubectl get pods](screenshots/kubectl-pods.png)
@@ -110,13 +110,10 @@
 
 ---
 
-## M9 — Observability (15 pts)
+## M8 — Observability
 
 - [ ] **Prometheus Targets page** — `http://localhost:9090/targets` showing stockpilot backend **UP**
   - ![Prometheus Targets UP](screenshots/prometheus-targets-up.png)
-
-- [ ] **Custom metric in Prometheus** — query `stockpilot_low_stock_products` showing a value
-  - ![Custom metric in Prometheus](screenshots/prometheus-custom-metric.png)
 
 - [ ] **Grafana dashboard imported** — `StockPilot — Inventory Observability` dashboard open
   - ![Grafana dashboard imported](screenshots/grafana-dashboard.png)

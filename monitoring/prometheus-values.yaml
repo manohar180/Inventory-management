@@ -31,11 +31,11 @@ prometheus:
     # Resource limits for the Prometheus server pod
     resources:
       requests:
-        cpu: "200m"
-        memory: "512Mi"
+        cpu: "50m"
+        memory: "256Mi"
       limits:
         cpu: "500m"
-        memory: "1Gi"
+        memory: "512Mi"
 
 # ── Grafana Configuration ─────────────────────────────────────────────────────
 grafana:
@@ -59,11 +59,18 @@ grafana:
   # Resource limits for Grafana
   resources:
     requests:
-      cpu: "100m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
-      cpu: "200m"
-      memory: "512Mi"
+      cpu: "500m"
+      memory: "384Mi"
+
+  livenessProbe:
+    initialDelaySeconds: 120
+    failureThreshold: 10
+  readinessProbe:
+    initialDelaySeconds: 30
+    failureThreshold: 10
 
   # Pre-configure the Prometheus data source so dashboards work immediately
   additionalDataSources:
@@ -73,33 +80,28 @@ grafana:
       access: proxy
       isDefault: true
 
-# ── Alertmanager ──────────────────────────────────────────────────────────────
+# ── Alertmanager (Disabled to save resources on micro nodes) ──────────────────
 alertmanager:
-  enabled: true
-  alertmanagerSpec:
-    resources:
-      requests:
-        cpu: "50m"
-        memory: "64Mi"
-      limits:
-        cpu: "100m"
-        memory: "128Mi"
+  enabled: false
 
-# ── Node Exporter ─────────────────────────────────────────────────────────────
-# Collects OS-level metrics from every worker node (CPU, memory, disk, network)
+# ── Node Exporter (Disabled to save resources on micro nodes) ─────────────────
 nodeExporter:
-  enabled: true
+  enabled: false
 
 # ── kube-state-metrics ────────────────────────────────────────────────────────
 # Exposes Kubernetes object state metrics (pod status, replica counts, etc.)
 kubeStateMetrics:
-  enabled: true
+  enabled: false
 
 # ── Prometheus Operator ───────────────────────────────────────────────────────
 prometheusOperator:
+  admissionWebhooks:
+    enabled: false
+  tls:
+    enabled: false
   resources:
     requests:
-      cpu: "100m"
+      cpu: "50m"
       memory: "128Mi"
     limits:
       cpu: "200m"
