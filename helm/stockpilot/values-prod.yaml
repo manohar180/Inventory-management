@@ -4,12 +4,12 @@ replicaCount: 2
 backend:
   image:
     repository: ghcr.io/manohar180/stockpilot-backend
-    tag: "19ba07ee7b0fdbd7cfdbc2046478d39f47a04e08"
+    tag: "dce93e6a4d8da453dea41d95f6b865e11f16fdb3"
 
 frontend:
   image:
     repository: ghcr.io/manohar180/stockpilot-frontend
-    tag: "19ba07ee7b0fdbd7cfdbc2046478d39f47a04e08"
+    tag: "dce93e6a4d8da453dea41d95f6b865e11f16fdb3"
 
 ingress:
   host: ""        # empty = match any host, so the AWS load balancer address works in a browser
